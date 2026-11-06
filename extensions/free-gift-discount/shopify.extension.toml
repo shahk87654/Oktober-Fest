@@ -1,0 +1,15 @@
+api_version = "2026-10"
+name = "Wiesn Atelier complimentary gifts"
+handle = "wiesn-free-gift-discount"
+type = "function"
+description = "Discount eligible matching accessories when a qualifying Wiesn Atelier outfit and its gift lines are in the cart."
+
+[[extensions.targeting]]
+target = "cart.lines.discounts.generate.run"
+input_query = "src/run.graphql"
+export = "run"
+
+[[extensions.metafields]]
+namespace = "$app:wiesn"
+key = "gift_discount"
+type = "json"

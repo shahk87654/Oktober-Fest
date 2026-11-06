@@ -1,0 +1,70 @@
+query ProductByHandle($handle: String!) {
+  product(handle: $handle) {
+    id
+    title
+    handle
+    description
+    descriptionHtml
+    vendor
+    productType
+    availableForSale
+    featuredImage { url altText width height }
+    images(first: 10) { nodes { url altText width height } }
+    options { id name values }
+    variants(first: 100) {
+      nodes {
+        id title sku availableForSale
+        price { amount currencyCode }
+        compareAtPrice { amount currencyCode }
+        selectedOptions { name value }
+        image { url altText width height }
+      }
+    }
+    metafields(identifiers: [
+      { namespace: "details", key: "material" }
+      { namespace: "details", key: "fit" }
+      { namespace: "details", key: "care" }
+      { namespace: "details", key: "size_chart" }
+      { namespace: "details", key: "size_chart_table" }
+      { namespace: "details", key: "gift_belt_handle" }
+      { namespace: "details", key: "gift_suspender_handle" }
+      { namespace: "reviews", key: "rating" }
+      { namespace: "reviews", key: "rating_count" }
+    ]) { namespace key value type reference { ... on MediaImage { image { url altText width height } } } }
+    seo { title description }
+  }
+}
+
+query CollectionByHandle($handle: String!, $first: Int!, $after: String, $sortKey: ProductCollectionSortKeys, $reverse: Boolean, $filters: [ProductFilter!]) {
+  collection(handle: $handle) {
+    id title handle description image { url altText width height }
+    products(first: $first, after: $after, sortKey: $sortKey, reverse: $reverse, filters: $filters) {
+      nodes { id title handle description vendor productType availableForSale featuredImage { url altText width height } variants(first: 100) { nodes { id title sku availableForSale price { amount currencyCode } compareAtPrice { amount currencyCode } selectedOptions { name value } image { url altText width height } } } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}
+
+query ProductRecommendations($productId: ID!) {
+  productRecommendations(productId: $productId) {
+    id title handle description vendor productType availableForSale
+    featuredImage { url altText width height }
+    images(first: 10) { nodes { url altText width height } }
+    options { id name values }
+    variants(first: 100) { nodes { id title sku availableForSale price { amount currencyCode } compareAtPrice { amount currencyCode } selectedOptions { name value } image { url altText width height } } }
+    metafields(identifiers: [{ namespace: "details", key: "fit" }]) { namespace key value type reference { ... on MediaImage { image { url altText width height } } } }
+    seo { title description }
+  }
+}
+
+query PredictiveSearch($query: String!, $first: Int!) {
+  predictiveSearch(query: $query, limit: $first, types: [PRODUCT, COLLECTION, ARTICLE]) {
+    products { id title handle featuredImage { url altText width height } }
+    collections { id title handle }
+    articles { id title handle }
+  }
+}
+
+query MetaobjectByHandle($type: String!, $handle: String!) {
+  metaobject(handle: { type: $type, handle: $handle }) { id type handle fields { key value } }
+}

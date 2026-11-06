@@ -1,0 +1,19 @@
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      gift: attribute(key: "_gift") {
+        value
+      }
+      merchandise {
+        ... on ProductVariant {
+          product {
+            isGift: hasAnyTag(tags: ["wiesn-free-gift"])
+            qualifies: hasAnyTag(tags: ["wiesn-gift-qualifying"])
+          }
+        }
+      }
+    }
+  }
+}
