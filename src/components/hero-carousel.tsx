@@ -151,27 +151,27 @@ export function HeroCarousel({
         </div>
       </div>
       <style>{`
-        .hero { position:relative; height:min(730px,calc(100svh - 105px)); min-height:560px; overflow:hidden; background:#4d473e; color:white; }
-        .hero-art { position:absolute; inset:0; background:radial-gradient(ellipse at 75% 30%,rgba(0,152,212,.52),transparent 30%),linear-gradient(125deg,#14211a 6%,#2f4a2b 58%,#7a4a25); }
+        .hero { position:relative; height:min(790px,calc(100svh - 105px)); min-height:580px; overflow:hidden; background:#28372b; color:white; }
+        .hero-art { position:absolute; inset:0; background:radial-gradient(ellipse at 76% 24%,rgba(216,232,94,.42),transparent 28%),radial-gradient(ellipse at 10% 100%,rgba(178,109,66,.3),transparent 42%),linear-gradient(125deg,#14211a 6%,#344b2e 58%,#76533a); }
         .hero-slide { position:absolute; inset:0; }
         .hero-picture { position:absolute; inset:0; }
         .hero-image { object-fit:cover; object-position:center 38%; }
-        .hero-shade { position:absolute; inset:0; background:linear-gradient(90deg,rgba(13,23,17,.64),rgba(13,23,17,.12) 65%,rgba(13,23,17,.08)),linear-gradient(0deg,rgba(13,23,17,.35),transparent 30%); }
+        .hero-shade { position:absolute; inset:0; background:linear-gradient(90deg,rgba(13,23,17,.72),rgba(13,23,17,.18) 68%,rgba(13,23,17,.08)),linear-gradient(0deg,rgba(13,23,17,.48),transparent 35%); }
         .hero-content { position:relative; display:flex; height:100%; flex-direction:column; align-items:flex-start; justify-content:center; padding-top:1rem; }
-        .hero-content .eyebrow { color:#eadcb8; }
-        .hero-content h1 { margin:1.15rem 0 2rem; font-size:clamp(4.5rem,10vw,9.3rem); line-height:.83; }
-        .hero-content .button-primary { border-color:var(--gold); background:var(--gold); color:var(--forest); }
-        .hero-content .button-primary:hover { background:#f0ba3d; }
+        .hero-content .eyebrow { color:#e4ed9a; }
+        .hero-content h1 { max-width:900px; margin:1.15rem 0 2rem; font-size:clamp(5rem,11vw,10rem); line-height:.79; letter-spacing:-.065em; text-wrap:balance; }
+        .hero-content .button-primary { min-height:52px; border-color:#d8e85e; background:#d8e85e; color:#17251c; }
+        .hero-content .button-primary:hover { background:#edf59c; }
         .hero-index { position:absolute; right:max(24px,calc((100vw - 1440px)/2)); bottom:2rem; font-family:var(--font-display); font-size:1.6rem; }
         .hero-index i { color:rgba(255,255,255,.55); font-family:var(--font-ui); font-size:.62rem; font-style:normal; }
         .hero-controls { position:absolute; right:0; bottom:2rem; left:0; display:flex; align-items:center; justify-content:space-between; }
         .hero-progress { display:flex; width:min(340px,60%); gap:.5rem; }
         .hero-progress button { position:relative; flex:1; height:16px; overflow:hidden; border:0; border-top:1px solid rgba(255,255,255,.45); background:transparent; cursor:pointer; }
-        .hero-progress button span { position:absolute; inset:-1px 0 auto; height:2px; background:var(--gold); transform-origin:left; transition:transform .35s; }
+        .hero-progress button span { position:absolute; inset:-1px 0 auto; height:2px; background:#d8e85e; transform-origin:left; transition:transform .35s; }
         .hero-arrows { display:flex; gap:.45rem; }
         .hero-arrows button { display:grid; width:42px; height:42px; place-items:center; border:1px solid rgba(255,255,255,.56); border-radius:50%; background:transparent; color:white; cursor:pointer; }
         .hero-arrows button:hover { background:white; color:var(--forest); }
-        @media(max-width:700px) { .hero { height:calc(78svh - 98px); min-height:530px; max-height:700px; } .hero-image { object-position:58% center; } .hero-content { justify-content:flex-end; padding-bottom:8rem; } .hero-content h1 { font-size:clamp(4.1rem,18vw,7.3rem); } .hero-index { right:16px; bottom:1.8rem; } .hero-controls { bottom:1.8rem; } .hero-arrows button { width:37px; height:37px; } }
+        @media(max-width:700px) { .hero { height:calc(82svh - 98px); min-height:540px; max-height:740px; } .hero-image { object-position:58% center; } .hero-content { justify-content:flex-end; padding-bottom:8rem; } .hero-content h1 { font-size:clamp(4.2rem,18vw,7.4rem); } .hero-index { right:16px; bottom:1.8rem; } .hero-controls { bottom:1.8rem; } .hero-arrows button { width:37px; height:37px; } }
       `}</style>
     </section>
   );
