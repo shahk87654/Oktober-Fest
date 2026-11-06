@@ -187,11 +187,13 @@ export default async function ProductPage({ params }: Props) {
   return (
     <>
       <JsonLd data={productSchema} /><JsonLd data={breadcrumbSchema} /><JsonLd data={faqSchema} />
+      <div className="pdp-page">
       <div className="page-shell pdp">
         <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><Link href={`/collections/${(product.productType || "all").toLowerCase().replaceAll(" ", "-")}`}>{product.productType || "Collection"}</Link><span>/</span><span aria-current="page">{product.title}</span></nav>
         <div className="pdp-grid">
           <ProductGallery product={product} />
-          <section className="buy-box stitch" aria-label="Product purchase options">
+          <section className="buy-box" aria-label="Product purchase options">
+            <div className="pdp-editorial-tag"><span aria-hidden="true">✳</span><p>{product.vendor || "Wiesn Atelier"} <i>/</i> {product.productType || "The Wiesn edit"}</p><b>01 — CONSIDERED CRAFT</b></div>
             {offer?.seasonal_eyebrow && <p className="eyebrow seasonal-eyebrow">{offer.seasonal_eyebrow}</p>}
             <h1 className="display">{product.title}</h1>
             <RatingLink rating={rating} ratingCount={ratingCount} />
@@ -217,15 +219,36 @@ export default async function ProductPage({ params }: Props) {
       <CompleteTheLook products={recommendations} />
       {firstVariant && <RecentlyViewed item={{ handle: product.handle, title: product.title, image: product.featuredImage, amount: firstVariant.price.amount, currencyCode: firstVariant.price.currencyCode }} />}
       <style>{`
-        .pdp { padding-bottom:4rem; }.breadcrumbs { display:flex; align-items:center; gap:.55rem; overflow:hidden; padding-block:1.1rem; font-size:.66rem; text-transform:capitalize; white-space:nowrap; }
-        .breadcrumbs span { color:var(--muted); }.breadcrumbs span:last-child { overflow:hidden; color:var(--forest); text-overflow:ellipsis; }
-        .pdp-grid { display:grid; grid-template-columns:minmax(0,7fr) minmax(340px,5fr); gap:clamp(2rem,4vw,4rem); align-items:start; }
-        .buy-box { display:flex; flex-direction:column; gap:1rem; border-radius:14px; padding:clamp(1.2rem,2.4vw,2.3rem); background:rgba(255,255,255,.2); }
-        .buy-box h1 { margin:0; font-size:clamp(2.4rem,4.2vw,4.4rem); line-height:.98; }.seasonal-eyebrow { margin:0; color:var(--berry); }
-        .rating-line { display:flex; align-items:center; gap:.42rem; width:max-content; border:0; background:transparent; padding:0; font-size:.65rem; cursor:pointer; }.rating-line>span { display:flex; gap:1px; color:var(--gold); }.rating-line u { color:var(--muted); text-underline-offset:2px; }
+        .pdp-page { overflow:clip; background:#f6f4ec; }
+        .pdp { padding-bottom:clamp(4rem,8vw,7rem); }
+        .breadcrumbs { display:flex; align-items:center; gap:.65rem; overflow:hidden; padding-block:1.25rem; color:#77796e; font-size:.63rem; letter-spacing:.04em; text-transform:capitalize; white-space:nowrap; }
+        .breadcrumbs a { transition:color .2s; }.breadcrumbs a:hover { color:#536337; }
+        .breadcrumbs span { color:#a0a092; }.breadcrumbs span:last-child { overflow:hidden; color:#17251c; text-overflow:ellipsis; }
+        .pdp-grid { display:grid; grid-template-columns:minmax(0,7.3fr) minmax(360px,4.7fr); gap:clamp(2rem,4vw,4.5rem); align-items:start; }
+        .buy-box { position:relative; display:flex; flex-direction:column; gap:1.2rem; border:0; border-top:3px solid #d8e85e; border-radius:0; padding:clamp(1.3rem,2.7vw,2.4rem); background:#fbfaf6; box-shadow:0 18px 55px rgba(37,44,28,.06); }
+        .buy-box::before { position:absolute; top:-3px; right:0; width:22%; height:3px; content:""; background:#17251c; }
+        .pdp-editorial-tag { display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:.65rem; padding-bottom:1rem; border-bottom:1px solid rgba(23,37,28,.12); }
+        .pdp-editorial-tag>span { display:grid; width:34px; height:34px; place-items:center; border-radius:50%; background:#d8e85e; color:#17251c; font-size:1rem; }
+        .pdp-editorial-tag p { margin:0; color:#4e5941; font-size:.61rem; font-weight:750; letter-spacing:.075em; text-transform:uppercase; }
+        .pdp-editorial-tag p i { padding-inline:.2rem; color:#a3a697; font-style:normal; }
+        .pdp-editorial-tag b { color:#858779; font-size:.52rem; letter-spacing:.11em; }
+        .buy-box h1 { max-width:620px; margin:0; font-size:clamp(2.8rem,4.7vw,5.1rem); line-height:.87; letter-spacing:-.065em; text-wrap:balance; }
+        .seasonal-eyebrow { margin:0; color:#66723e!important; }
+        .rating-line { display:flex; align-items:center; gap:.42rem; width:max-content; border:0; background:transparent; padding:0; font-size:.65rem; cursor:pointer; }
+        .rating-line>span { display:flex; gap:1px; color:#89952d; }.rating-line u { color:#77796e; text-underline-offset:3px; }
+        .pdp-page .button-primary { border-radius:3px; background:#d8e85e; border-color:#d8e85e; color:#17251c; }
+        .pdp-page .button-primary:hover { background:#e7f290; }
         @media(min-width:1280px) { .pdp-grid { grid-template-columns:minmax(0,7fr) minmax(420px,5fr); } }
-        @media(max-width:800px) { .pdp-grid { grid-template-columns:1fr; gap:1.4rem; }.buy-box { padding:1.1rem; }.buy-box h1 { font-size:2.6rem; } }
+        @media(max-width:800px) {
+          .pdp { padding-bottom:3rem; }
+          .pdp-grid { grid-template-columns:1fr; gap:1.2rem; }
+          .buy-box { gap:1rem; padding:1.2rem 1rem; }
+          .buy-box h1 { font-size:clamp(2.8rem,10vw,4rem); }
+          .pdp-editorial-tag { grid-template-columns:32px 1fr; }
+          .pdp-editorial-tag b { grid-column:2; margin-top:-.4rem; }
+        }
       `}</style>
+      </div>
     </>
   );
 }
