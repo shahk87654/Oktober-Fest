@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Minus, Plus, X } from "lucide-react";
+import { ArrowRight, LockKeyhole, Minus, Plus, X } from "lucide-react";
 import { formatMoney, imageUrl } from "@/lib/format";
 import { useCart } from "./cart-provider";
 
@@ -35,7 +35,7 @@ export function CartDrawer() {
           >
             <header className="drawer-header">
               <div>
-                <span className="eyebrow">YOUR EDIT</span>
+                <span className="eyebrow">THE ALPINE EDIT / SHOPPING BAG</span>
                 <h2>Your bag <span>({cart?.totalQuantity ?? 0})</span></h2>
               </div>
               <button className="icon-button" aria-label="Close bag" onClick={closeCart}><X size={20} /></button>
@@ -43,8 +43,9 @@ export function CartDrawer() {
             <div className="drawer-lines">
               {!cart?.lines.nodes.length ? (
                 <div className="empty-bag">
+                  <span className="drawer-empty-mark" aria-hidden="true">A</span>
                   <p>Your bag is taking a moment to itself.</p>
-                  <button className="text-link" onClick={closeCart}>Continue exploring <ArrowRight size={14} /></button>
+                  <Link className="text-link" href="/collections" onClick={closeCart}>Explore the collections <ArrowRight size={14} /></Link>
                 </div>
               ) : (
                 cart.lines.nodes.map((line) => (
@@ -53,13 +54,14 @@ export function CartDrawer() {
                       {line.merchandise.product.featuredImage && (
                         <Image
                           src={imageUrl(line.merchandise.image?.url ?? line.merchandise.product.featuredImage.url, 240)}
-                          alt={line.merchandise.product.featuredImage.altText ?? line.merchandise.product.title}
+                          alt={line.merchandise.image?.altText ?? line.merchandise.product.featuredImage.altText ?? line.merchandise.product.title}
                           width={100}
                           height={126}
                         />
                       )}
                     </Link>
                     <div className="cart-line-info">
+                      <span className="cart-line-vendor">{line.merchandise.product.vendor || "ALPINE ATELIER"}</span>
                       <div className="cart-line-title">
                         <Link href={`/products/${line.merchandise.product.handle}`} onClick={closeCart}>{line.merchandise.product.title}</Link>
                         <span>{formatMoney(line.cost.totalAmount)}</span>
@@ -81,9 +83,11 @@ export function CartDrawer() {
             {error && <p className="form-error drawer-error" role="alert">{error}</p>}
             {!!cart?.lines.nodes.length && (
               <footer className="drawer-footer">
+                <span className="drawer-summary-label">ORDER SUMMARY</span>
                 <div className="subtotal-row"><span>Subtotal</span><strong>{formatMoney(cart.cost.subtotalAmount)}</strong></div>
                 <p className="muted small">Taxes and shipping are calculated at checkout.</p>
                 <a className="button button-dark checkout-button" href={cart.checkoutUrl}>Continue to checkout <ArrowRight size={16} /></a>
+                <div className="drawer-secure-note"><LockKeyhole size={13} />SECURE CHECKOUT THROUGH SHOPIFY</div>
                 <button className="text-link continue-link" onClick={closeCart}>Continue shopping</button>
               </footer>
             )}

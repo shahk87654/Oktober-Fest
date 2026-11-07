@@ -70,7 +70,6 @@ export function SiteHeader({ shopifyConfigured }: { shopifyConfigured: boolean }
           </nav>
           <div className="header-actions">
             <button className="icon-button search-trigger" aria-label="Search" onClick={() => setSearchOpen(true)}><Search size={19} /><span>SEARCH</span></button>
-            <Link className="icon-button account-link" href="/account" aria-label="Account"><span>ACCOUNT</span></Link>
             <button className="icon-button bag-trigger" aria-label={`Open bag, ${cart?.totalQuantity ?? 0} items`} onClick={openCart}>
               <ShoppingBag size={19} /><span>BAG</span><span className="bag-count">{cart?.totalQuantity ?? 0}</span>
             </button>
