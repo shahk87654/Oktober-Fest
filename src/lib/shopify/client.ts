@@ -1,80 +1,59 @@
 import "server-only";
-import { env, shopifyConfigured } from "@/lib/env";
 
-type GraphQLError = { message: string; extensions?: Record<string, unknown> };
-type GraphQLResponse<T> = { data?: T; errors?: GraphQLError[] };
+interface ShopifyResponse<T> {
+  data?: T;
+  errors?: Array<{ message: string }>;
+}
 
 export class ShopifyRequestError extends Error {
-  constructor(message: string, public readonly status?: number) {
+  constructor(message: string) {
     super(message);
     this.name = "ShopifyRequestError";
   }
 }
 
-export async function storefrontFetch<TData, TVariables extends Record<string, unknown>>(
+export function isShopifyConfigured(): boolean {
+  return Boolean(process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN);
+}
+
+export async function shopifyFetch<T>(
   query: string,
-  variables: TVariables,
-  options: { tags?: string[]; revalidate?: number; country?: string; language?: string } = {},
-): Promise<TData> {
-  if (!shopifyConfigured || !env.SHOPIFY_STORE_DOMAIN || !env.SHOPIFY_STOREFRONT_ACCESS_TOKEN) {
-    throw new ShopifyRequestError("Shopify is not configured. Add the Storefront API credentials to the server environment.");
+  variables: Record<string, unknown> = {},
+  options: { cache?: RequestCache; revalidate?: number } = {},
+): Promise<T> {
+  const domain = process.env.SHOPIFY_STORE_DOMAIN;
+  const token = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+
+  if (!domain || !token) {
+    throw new ShopifyRequestError(
+      "Shopify is not configured. Set SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN.",
+    );
   }
 
-  const endpoint = `https://${env.SHOPIFY_STORE_DOMAIN}/api/${env.SHOPIFY_API_VERSION}/graphql.json`;
-  const inContext = Boolean(options.country || options.language);
-  const response = await fetch(endpoint, {
+  const version = process.env.SHOPIFY_API_VERSION || "2026-10";
+  const response = await fetch(`https://${domain}/api/${version}/graphql.json`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": env.SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+      "X-Shopify-Storefront-Access-Token": token,
     },
-    body: JSON.stringify({
-      query: inContext ? withInContext(query) : query,
-      variables: inContext
-        ? { ...variables, country: options.country, language: options.language }
-        : variables,
-    }),
-    ...(options.tags?.length || options.revalidate !== undefined
-      ? { next: { tags: options.tags ?? [], revalidate: options.revalidate ?? 300 } }
-      : { cache: "no-store" as const }),
+    body: JSON.stringify({ query, variables }),
+    ...(options.cache === "no-store"
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidate ?? 60 } }),
   });
 
   if (!response.ok) {
-    throw new ShopifyRequestError(`Shopify Storefront API returned HTTP ${response.status}.`, response.status);
+    throw new ShopifyRequestError(`Shopify Storefront API returned ${response.status}.`);
   }
-  const result = (await response.json()) as GraphQLResponse<TData>;
+
+  const result = (await response.json()) as ShopifyResponse<T>;
   if (result.errors?.length) {
     throw new ShopifyRequestError(result.errors.map((error) => error.message).join("; "));
   }
   if (!result.data) {
-    throw new ShopifyRequestError("Shopify returned an empty GraphQL response.");
+    throw new ShopifyRequestError("Shopify returned an empty response.");
   }
+
   return result.data;
-}
-
-export function withInContext(query: string): string {
-  return query.replace(
-    /^(query|mutation)\s+([A-Za-z0-9_]+)?\s*(\((?:[^()]|\([^()]*\))*\))?\s*\{/,
-    (_match, kind: string, operation: string | undefined, args: string | undefined) => {
-      const definitions = args?.slice(1, -1).trim();
-      const contextDefinitions = [
-        definitions,
-        "$country: CountryCode",
-        "$language: LanguageCode",
-      ].filter(Boolean).join(", ");
-      return `${kind} ${operation ?? ""}(${contextDefinitions}) @inContext(country: $country, language: $language) {`;
-    },
-  );
-}
-
-export async function contextualFetch<TData, TVariables extends Record<string, unknown>>(
-  query: string,
-  variables: TVariables,
-  options: { tags?: string[]; revalidate?: number; country?: string; language?: string } = {},
-): Promise<TData> {
-  return storefrontFetch<TData, TVariables>(query, variables, {
-    country: options.country ?? "US",
-    language: options.language ?? "EN",
-    ...options,
-  });
 }

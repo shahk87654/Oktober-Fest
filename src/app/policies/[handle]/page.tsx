@@ -1,36 +1,29 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getStorePolicy } from "@/lib/policy";
+import { isShopifyConfigured } from "@/lib/shopify/client";
+import { getShopContent, type ShopifyPolicy } from "@/lib/shopify/content";
 
-type Props = { params: Promise<{ handle: string }> };
-const titles: Record<string, string> = {
-  "shipping-policy": "Shipping & delivery",
-  "refund-policy": "Returns & refunds",
-  "privacy-policy": "Privacy policy",
-  "terms-of-service": "Terms of service",
+const policyFields: Record<string, keyof Pick<Awaited<ReturnType<typeof getShopContent>>, "privacyPolicy" | "termsOfService" | "refundPolicy" | "shippingPolicy">> = {
+  "privacy-policy": "privacyPolicy",
+  "terms-of-service": "termsOfService",
+  "refund-policy": "refundPolicy",
+  "shipping-policy": "shippingPolicy",
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle } = await params;
-  if (!titles[handle]) notFound();
-  return { title: titles[handle], alternates: { canonical: `/policies/${handle}` } };
+  if (!isShopifyConfigured() || !policyFields[handle]) return { title: "Customer care" };
+  const policy = (await getShopContent())[policyFields[handle]] as ShopifyPolicy | null;
+  return policy ? { title: policy.title, alternates: { canonical: `/policies/${handle}` } } : { title: "Customer care" };
 }
 
-export default async function PolicyPage({ params }: Props) {
+export default async function PolicyPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
-  const title = titles[handle];
-  if (!title) notFound();
-  const policy = await getStorePolicy();
-  const paragraph = handle === "shipping-policy"
-    ? policy.shippingCopy
-    : handle === "refund-policy"
-      ? policy.returnsCopy
-      : handle === "privacy-policy"
-        ? "We use information you provide to fulfill orders, support your account and communicate with you when you have chosen to receive updates. Optional analytics are enabled only after your consent. Contact servus@wiesnatelier.com to ask about your personal information."
-        : "By using this storefront, you agree to use it lawfully and to review the product, shipping and return details before placing an order. Prices, product availability and delivery options are confirmed at checkout.";
-  return <article className="page-shell policy-page"><nav aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>{title}</span></nav><p className="eyebrow">The important details</p><h1 className="display">{title}</h1><p>{paragraph}</p><p>For help, write to <a href="mailto:servus@wiesnatelier.com">servus@wiesnatelier.com</a>. Our team will be glad to assist.</p><style>{`
-    .policy-page { min-height:55vh; padding-block:1rem 6rem; }.policy-page nav { display:flex; gap:.6rem; margin-bottom:3rem; font-size:.68rem; }.policy-page nav span { color:var(--muted); }.policy-page>.eyebrow { color:var(--pretzel); }
-    .policy-page h1 { max-width:850px; margin:.6rem 0 1.5rem; font-size:clamp(3rem,7vw,6rem); line-height:.96; }.policy-page>p:not(.eyebrow) { max-width:760px; color:#4e524a; font-size:.88rem; line-height:1.8; }.policy-page a:not([href="/"]) { text-decoration:underline; text-decoration-color:var(--gold); text-underline-offset:3px; }
-  `}</style></article>;
+  if (!policyFields[handle]) notFound();
+  if (!isShopifyConfigured()) return <main className="store-setup"><span className="eyebrow">CUSTOMER CARE</span><h1>Details,<br /><em>from the atelier.</em></h1><p>Store policies are published and maintained through Shopify Admin.</p></main>;
+  const policy = (await getShopContent())[policyFields[handle]] as ShopifyPolicy | null;
+  if (!policy) notFound();
+  return <main className="policy-page"><span className="eyebrow">CUSTOMER CARE / {handle.replaceAll("-", " ").toUpperCase()}</span><h1>{policy.title}</h1><article dangerouslySetInnerHTML={{ __html: policy.body }} /></main>;
 }

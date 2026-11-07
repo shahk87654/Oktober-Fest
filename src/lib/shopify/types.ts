@@ -1,83 +1,130 @@
-export type Money = { amount: string; currencyCode: string };
-export type ShopifyImage = {
+export interface ShopifyImage {
   url: string;
   altText: string | null;
   width: number;
   height: number;
-};
-export type SelectedOption = { name: string; value: string };
-export type ProductVariant = {
-  id: string;
-  title: string;
-  sku: string | null;
-  availableForSale: boolean;
-  quantityAvailable?: number | null;
-  price: Money;
-  compareAtPrice: Money | null;
-  selectedOptions: SelectedOption[];
-  image: ShopifyImage | null;
-};
-export type ProductMetafield = {
-  namespace: string;
-  key: string;
+}
+
+export interface ShopifyMoney {
+  amount: string;
+  currencyCode: string;
+}
+
+export interface ShopifyPaymentSettings {
+  acceptedCardBrands: string[];
+  supportedDigitalWallets: string[];
+}
+
+export interface ShopifyPageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+export interface ShopifyConnection<T> {
+  nodes: T[];
+  pageInfo?: ShopifyPageInfo;
+}
+
+export interface ShopifySelectedOption {
+  name: string;
   value: string;
-  type: string;
-  reference?: { image: ShopifyImage | null } | null;
-};
-export type Product = {
+}
+
+export interface ShopifyVariant {
   id: string;
   title: string;
+  availableForSale: boolean;
+  sku: string | null;
+  price: ShopifyMoney;
+  compareAtPrice: ShopifyMoney | null;
+  selectedOptions: ShopifySelectedOption[];
+  image: ShopifyImage | null;
+}
+
+export interface ShopifyProduct {
+  id: string;
   handle: string;
+  title: string;
   description: string;
-  descriptionHtml: string;
-  vendor: string;
+  descriptionHtml?: string;
   productType: string;
+  vendor: string;
+  tags: string[];
   availableForSale: boolean;
   featuredImage: ShopifyImage | null;
-  images: { nodes: ShopifyImage[] };
-  options: { id: string; name: string; values: string[] }[];
-  variants: { nodes: ProductVariant[] };
-  metafields: (ProductMetafield | null)[];
+  images: ShopifyConnection<ShopifyImage>;
+  priceRange: { minVariantPrice: ShopifyMoney; maxVariantPrice: ShopifyMoney };
+  compareAtPriceRange: { minVariantPrice: ShopifyMoney | null };
+  options: Array<{ name: string; values: string[] }>;
+  variants: ShopifyConnection<ShopifyVariant>;
   seo: { title: string | null; description: string | null };
-};
-export type CartLine = {
+  metafields?: Array<{ namespace: string; key: string; value: string } | null>;
+  onlineStoreUrl?: string | null;
+}
+
+export interface ShopifyCollectionSummary {
   id: string;
-  quantity: number;
-  merchandise: {
-    id: string;
-    title: string;
-    product: { title: string; handle: string; featuredImage: ShopifyImage | null };
-    selectedOptions: SelectedOption[];
-    price: Money;
-  };
-  cost: { totalAmount: Money };
-  attributes: { key: string; value: string }[];
-};
-export type Cart = {
-  id: string;
-  checkoutUrl: string;
-  totalQuantity: number;
-  buyerIdentity: { countryCode: string | null };
-  cost: { subtotalAmount: Money; totalAmount: Money };
-  lines: { nodes: CartLine[] };
-};
-export type StorefrontConnection<T> = { nodes: T[]; pageInfo?: { hasNextPage: boolean; endCursor: string | null } };
-export type Collection = {
-  id: string;
-  title: string;
   handle: string;
+  title: string;
   description: string;
   image: ShopifyImage | null;
-  products: StorefrontConnection<Product>;
-};
-export type Article = {
+}
+
+export interface ShopifyCollection {
   id: string;
-  title: string;
   handle: string;
+  title: string;
+  description: string;
+  descriptionHtml: string;
+  image: ShopifyImage | null;
+  seo: { title: string | null; description: string | null };
+  products: ShopifyConnection<ShopifyProduct>;
+}
+
+export interface ShopifyFilterValue {
+  id: string;
+  label: string;
+  count?: number;
+  input: string;
+}
+
+export interface ShopifyFilter {
+  id: string;
+  label: string;
+  type: string;
+  values: ShopifyFilterValue[];
+}
+
+export interface ShopifyArticle {
+  handle: string;
+  title: string;
   excerpt: string;
   contentHtml: string;
   publishedAt: string;
-  author: { name: string };
   image: ShopifyImage | null;
   blog: { handle: string; title: string };
-};
+}
+
+export interface ShopifyPage {
+  title: string;
+  handle: string;
+  body: string;
+  seo: { title: string | null; description: string | null };
+}
+
+export interface ShopifyCartLine {
+  id: string;
+  quantity: number;
+  merchandise: ShopifyVariant & {
+    product: Pick<ShopifyProduct, "handle" | "title" | "vendor" | "featuredImage">;
+  };
+  cost: { amountPerQuantity: ShopifyMoney; totalAmount: ShopifyMoney };
+}
+
+export interface ShopifyCart {
+  id: string;
+  checkoutUrl: string;
+  totalQuantity: number;
+  cost: { subtotalAmount: ShopifyMoney; totalAmount: ShopifyMoney };
+  lines: ShopifyConnection<ShopifyCartLine>;
+}

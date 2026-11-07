@@ -1,19 +1,21 @@
-export function formatMoney(
-  money: { amount: string; currencyCode: string },
-  locale = "en-US",
-) {
-  return new Intl.NumberFormat(locale, {
+import type { ShopifyMoney } from "./shopify/types";
+
+export function formatMoney(money: ShopifyMoney): string {
+  return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: money.currencyCode,
   }).format(Number(money.amount));
 }
 
-export function discountPercent(
-  price: { amount: string },
-  compareAtPrice: { amount: string } | null,
-) {
-  const priceAmount = Number(price.amount);
-  const compareAmount = Number(compareAtPrice?.amount);
-  if (!Number.isFinite(priceAmount) || !Number.isFinite(compareAmount) || compareAmount <= priceAmount) return null;
-  return Math.round((1 - priceAmount / compareAmount) * 100);
+export function imageUrl(url: string, width = 900): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "cdn.shopify.com") {
+      parsed.searchParams.set("width", String(width));
+      parsed.searchParams.set("format", "webp");
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }

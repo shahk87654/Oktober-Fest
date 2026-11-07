@@ -1,114 +1,95 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { env } from "@/lib/env";
-import { storefrontFetch } from "@/lib/shopify/client";
+import { shopifyFetch } from "./client";
+import { CART_QUERY } from "./queries";
 import {
-  CART_BUYER_IDENTITY_UPDATE_MUTATION,
-  CART_CREATE_MUTATION,
-  CART_LINES_ADD_MUTATION,
-  CART_LINES_REMOVE_MUTATION,
-  CART_LINES_UPDATE_MUTATION,
-  CART_QUERY,
-} from "@/lib/shopify/mutations";
-import type { Cart } from "@/lib/shopify/types";
+  CART_CREATE_SIMPLE,
+  CART_LINES_ADD,
+  CART_LINES_REMOVE,
+  CART_LINES_UPDATE,
+} from "./mutations";
+import type { ShopifyCart } from "./types";
 
-type UserError = { field: string[] | null; message: string; code: string | null };
-type MutationResult = { cart: Cart | null; userErrors: UserError[] };
-type CartResponse = { cart: Cart | null };
-
-export type CartLineInput = {
-  merchandiseId: string;
-  quantity: number;
-  attributes?: { key: string; value: string }[];
-};
-
-function assertMutation(result: MutationResult): Cart {
-  if (result.userErrors.length) {
-    throw new Error(result.userErrors.map(({ message }) => message).join("; "));
-  }
-  if (!result.cart) throw new Error("Shopify did not return a cart after the mutation.");
-  return result.cart;
+interface CartResult {
+  cart: ShopifyCart | null;
 }
 
-async function saveCartId(cartId: string) {
-  const cookieStore = await cookies();
-  cookieStore.set("wiesn_cart", cartId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+interface CartMutationResult {
+  cartCreate?: { cart: ShopifyCart | null; userErrors: Array<{ message: string }> };
+  cartLinesAdd?: { cart: Pick<ShopifyCart, "id"> | null; userErrors: Array<{ message: string }> };
+  cartLinesUpdate?: { cart: Pick<ShopifyCart, "id"> | null; userErrors: Array<{ message: string }> };
+  cartLinesRemove?: { cart: Pick<ShopifyCart, "id"> | null; userErrors: Array<{ message: string }> };
 }
 
-async function currentCartId() {
-  const cookieStore = await cookies();
-  return cookieStore.get("wiesn_cart")?.value;
-}
-
-export async function fetchCart(): Promise<Cart | null> {
-  const cartId = await currentCartId();
-  if (!cartId) return null;
-  const response = await storefrontFetch<CartResponse, { id: string }>(CART_QUERY, { id: cartId });
-  return response.cart;
-}
-
-export async function addLinesToCart(lines: CartLineInput[], countryCode = "US"): Promise<Cart> {
-  const existingId = await currentCartId();
-  const response = existingId
-    ? await storefrontFetch<{ cartLinesAdd: MutationResult }, { cartId: string; lines: CartLineInput[] }>(
-        CART_LINES_ADD_MUTATION, { cartId: existingId, lines },
-      ).then(({ cartLinesAdd }) => cartLinesAdd)
-    : await storefrontFetch<{ cartCreate: MutationResult }, { input: { lines: CartLineInput[]; buyerIdentity: { countryCode: string } } }>(
-        CART_CREATE_MUTATION,
-        { input: { lines, buyerIdentity: { countryCode } } },
-      ).then(({ cartCreate }) => cartCreate);
-  const cart = assertMutation(response);
-  await saveCartId(cart.id);
+async function fetchCart(id: string): Promise<ShopifyCart | null> {
+  const { cart } = await shopifyFetch<CartResult>(CART_QUERY, { id }, { cache: "no-store" });
   return cart;
 }
 
-export async function updateCartLines(
-  lines: { id: string; quantity: number; attributes?: { key: string; value: string }[] }[],
-): Promise<Cart> {
-  const cartId = await currentCartId();
-  if (!cartId) throw new Error("There is no active cart to update.");
-  const { cartLinesUpdate } = await storefrontFetch<
-    { cartLinesUpdate: MutationResult },
-    { cartId: string; lines: typeof lines }
-  >(CART_LINES_UPDATE_MUTATION, { cartId, lines });
-  return assertMutation(cartLinesUpdate);
+async function assertMutation(
+  query: string,
+  variables: Record<string, unknown>,
+  field: keyof CartMutationResult,
+): Promise<string> {
+  const result = await shopifyFetch<CartMutationResult>(query, variables, { cache: "no-store" });
+  const mutation = result[field];
+  if (!mutation) throw new Error("Shopify cart mutation returned no result.");
+  if (mutation.userErrors.length) {
+    throw new Error(mutation.userErrors.map((error) => error.message).join("; "));
+  }
+  if (!mutation.cart) throw new Error("Shopify cart mutation returned no cart.");
+  return mutation.cart.id;
 }
 
-export async function removeCartLines(lineIds: string[]): Promise<Cart> {
-  const cartId = await currentCartId();
-  if (!cartId) throw new Error("There is no active cart to update.");
-  const { cartLinesRemove } = await storefrontFetch<
-    { cartLinesRemove: MutationResult },
-    { cartId: string; lineIds: string[] }
-  >(CART_LINES_REMOVE_MUTATION, { cartId, lineIds });
-  return assertMutation(cartLinesRemove);
+export async function getCart(id: string): Promise<ShopifyCart | null> {
+  return fetchCart(id);
 }
 
-export async function updateBuyerIdentity(countryCode: string): Promise<Cart> {
-  const cartId = await currentCartId();
-  if (!cartId) throw new Error("There is no active cart to update.");
-  const { cartBuyerIdentityUpdate } = await storefrontFetch<
-    { cartBuyerIdentityUpdate: MutationResult },
-    { cartId: string; buyerIdentity: { countryCode: string } }
-  >(CART_BUYER_IDENTITY_UPDATE_MUTATION, { cartId, buyerIdentity: { countryCode } });
-  return assertMutation(cartBuyerIdentityUpdate);
+export async function addCartLine(
+  cartId: string | null,
+  merchandiseId: string,
+  quantity: number,
+): Promise<ShopifyCart> {
+  if (cartId) {
+    const id = await assertMutation(
+      CART_LINES_ADD,
+      { cartId, lines: [{ merchandiseId, quantity }] },
+      "cartLinesAdd",
+    );
+    return (await fetchCart(id)) ?? Promise.reject(new Error("Unable to retrieve the updated cart."));
+  }
+
+  const result = await shopifyFetch<CartMutationResult>(
+    CART_CREATE_SIMPLE,
+    { input: { lines: [{ merchandiseId, quantity }] } },
+    { cache: "no-store" },
+  );
+  const created = result.cartCreate;
+  if (!created) throw new Error("Shopify cart creation returned no result.");
+  if (created.userErrors.length) {
+    throw new Error(created.userErrors.map((error) => error.message).join("; "));
+  }
+  if (!created.cart) throw new Error("Shopify did not return the new cart.");
+  return created.cart;
 }
 
-export async function setCartCountry(countryCode: string) {
-  if (!/^[A-Z]{2}$/.test(countryCode)) throw new Error("Choose a valid two-letter country code.");
-  if (!(await currentCartId())) return null;
-  return updateBuyerIdentity(countryCode);
+export async function updateCartLine(
+  cartId: string,
+  lineId: string,
+  quantity: number,
+): Promise<ShopifyCart> {
+  if (quantity < 1) {
+    await assertMutation(CART_LINES_REMOVE, { cartId, lineIds: [lineId] }, "cartLinesRemove");
+  } else {
+    await assertMutation(
+      CART_LINES_UPDATE,
+      { cartId, lines: [{ id: lineId, quantity }] },
+      "cartLinesUpdate",
+    );
+  }
+  return (await fetchCart(cartId)) ?? Promise.reject(new Error("Unable to retrieve the updated cart."));
 }
 
-export async function getStoredCountry() {
-  const cookieStore = await cookies();
-  return cookieStore.get("wiesn_country")?.value ?? "US";
+export async function removeCartLine(cartId: string, lineId: string): Promise<ShopifyCart> {
+  await assertMutation(CART_LINES_REMOVE, { cartId, lineIds: [lineId] }, "cartLinesRemove");
+  return (await fetchCart(cartId)) ?? Promise.reject(new Error("Unable to retrieve the updated cart."));
 }
-
-export const freeShippingThresholdUSD = env.FREE_SHIPPING_THRESHOLD_USD;

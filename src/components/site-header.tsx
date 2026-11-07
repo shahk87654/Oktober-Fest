@@ -1,166 +1,114 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ChevronDown, Menu, Search, ShoppingBag, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Menu, Search, ShoppingBag, X } from "lucide-react";
-import { AnnouncementBar } from "@/components/announcement-bar";
+import { collectionHandles, journalBlogHandle } from "@/lib/config";
+import { useCart } from "./cart-provider";
+import { SearchOverlay } from "./search-overlay";
 
-const navigation = [
-  { title: "Men", href: "/collections/men", links: ["Lederhosen", "Bundhosen", "Jackets", "Vests", "Shirts", "Shoes"] },
-  { title: "Women", href: "/collections/women", links: ["Dirndl", "Cardigans & Jackets", "Blouses", "Lederhosen", "Shoes"] },
-  { title: "Kids", href: "/collections/kids", links: ["Kids Lederhosen", "Kids Shirts", "Kids Dirndl"] },
-  { title: "Accessories", href: "/collections/accessories", links: ["Hats", "Belts", "Suspenders", "Socks", "T-Shirts"] },
-  { title: "Materials", href: "/pages/materials", links: ["Cowskin", "Goatskin", "Deerskin", "Cotton", "Silk", "Wool"] },
-  { title: "Magazine", href: "/blogs/news", links: ["Style notes", "Bavarian stories", "The Wiesn guide"] },
+const navItems = [
+  { title: "MEN", href: `/collections/${collectionHandles.men}`, menu: "men" },
+  { title: "WOMEN", href: `/collections/${collectionHandles.women}`, menu: "women" },
+  { title: "KIDS", href: `/collections/${collectionHandles.kids}` },
+  { title: "ACCESSORIES", href: `/collections/${collectionHandles.accessories}` },
+  { title: "COLLECTIONS", href: "/collections", menu: "collections" },
+  { title: "JOURNAL", href: `/blogs/${journalBlogHandle}` },
 ];
-const collectionHandles: Record<string, string> = {
-  "Men:Lederhosen": "lederhosen-men",
-  "Men:Jackets": "trachten-jackets",
-  "Men:Vests": "vest",
-  "Men:Shirts": "trachten-shirts",
-  "Women:Cardigans & Jackets": "women-jackets-sweaters",
-  "Women:Blouses": "blouses",
-  "Women:Lederhosen": "lederhosen-women",
-  "Women:Shoes": "dirndl-shoes",
-  "Kids:Kids Lederhosen": "lederhosen-kids",
-  "Kids:Kids Shirts": "kids-shirts",
-  "Kids:Kids Dirndl": "dirndl-kids",
-  "Accessories:Hats": "hats",
-  "Accessories:Belts": "belts",
-  "Accessories:Suspenders": "suspender",
-  "Accessories:Socks": "trachten-socks",
-  "Accessories:T-Shirts": "oktoberfest-t-shirts",
-};
 
-export function SiteHeader({
-  initialCount = 0,
-  announcement,
-  shopName = "Wiesn Atelier",
-  shopLogo,
-}: {
-  initialCount?: number;
-  announcement?: { firstMessage?: string; secondMessage?: string };
-  shopName?: string;
-  shopLogo?: string;
-}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(initialCount);
+export function SiteHeader({ shopifyConfigured }: { shopifyConfigured: boolean }) {
+  const { cart, openCart } = useCart();
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    const update = (event: Event) => {
-      const cart = (event as CustomEvent<{ totalQuantity: number }>).detail;
-      if (cart) setCartCount(cart.totalQuantity);
-    };
-    window.addEventListener("wiesn:cart-updated", update);
-    return () => window.removeEventListener("wiesn:cart-updated", update);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  const menuContent: Record<string, Array<{ label: string; href: string }>> = {
+    men: [
+      { label: "The Lederhosen Edit", href: `/collections/${collectionHandles.men}` },
+      { label: "Shirts & Waistcoats", href: `/collections/${collectionHandles.men}` },
+      { label: "Shoes & Accessories", href: `/collections/${collectionHandles.accessories}` },
+    ],
+    women: [
+      { label: "Dirndl Dresses", href: `/collections/${collectionHandles.women}` },
+      { label: "Blouses & Jackets", href: `/collections/${collectionHandles.women}` },
+      { label: "Shoes & Accessories", href: `/collections/${collectionHandles.accessories}` },
+    ],
+    collections: [
+      { label: "Men", href: `/collections/${collectionHandles.men}` },
+      { label: "Women", href: `/collections/${collectionHandles.women}` },
+      { label: "Children", href: `/collections/${collectionHandles.kids}` },
+      { label: "All collections", href: "/collections" },
+    ],
+  };
 
   return (
     <>
-      <AnnouncementBar firstMessage={announcement?.firstMessage} secondMessage={announcement?.secondMessage} />
-      <header className="site-header">
-        <div className="header-inner page-shell">
-          <button className="icon-button mobile-menu-trigger" type="button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
-            {menuOpen ? <X size={21} /> : <Menu size={21} />}
+      <div className="announcement"><span>THE SEASON, IN GOOD COMPANY</span><span className="announcement-separator">—</span><span>DELIVERY RATES SHOWN AT CHECKOUT</span></div>
+      <header className={`site-header ${scrolled ? "is-scrolled" : ""}`} onMouseLeave={() => setActiveMenu(null)}>
+        <div className="header-inner">
+          <button className="icon-button mobile-menu-toggle" aria-label={mobileOpen ? "Close menu" : "Open menu"} onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
-          <Link className="brand-mark" href="/" aria-label={`${shopName} home`}>
-            {shopLogo ? <Image className="brand-mark__logo" src={shopLogo} alt="" width={148} height={48} priority /> : <span className="brand-mark__crest" aria-hidden="true">✳</span>}
-            <span className="brand-mark__name">{shopName}</span>
+          <Link className="wordmark" href="/" aria-label="Alpine Atelier home">
+            <span className="wordmark-top">ALPINE</span><span className="wordmark-bottom">ATELIER</span>
           </Link>
           <nav className="desktop-nav" aria-label="Main navigation">
-            {navigation.map((item) => (
-              <div className="nav-item" key={item.title}>
-                <Link href={item.href} className="nav-link">{item.title}</Link>
-                <div className="mega-menu">
-                  <p className="eyebrow">{item.title} collection</p>
-                  <div className="mega-menu__links">
-                    {item.links.map((link) => {
-                      const href = item.title === "Materials"
-                        ? `/pages/${link.toLowerCase().replaceAll(" ", "-")}`
-                        : item.title === "Magazine"
-                          ? "/blogs/news"
-                          : `/collections/${collectionHandles[`${item.title}:${link}`] ?? link.toLowerCase().replaceAll(" & ", "-").replaceAll(" ", "-")}`;
-                      return <Link key={link} href={href} className="mega-menu__link">{link}<span aria-hidden="true">↗</span></Link>;
-                    })}
-                  </div>
-                  <p className="mega-menu__note display">Made for the<br />long way home.</p>
-                </div>
+            {navItems.map((item) => (
+              <div className="nav-item" key={item.title} onMouseEnter={() => setActiveMenu(item.menu ?? null)}>
+                <Link href={item.href} onFocus={() => setActiveMenu(item.menu ?? null)} onClick={() => setActiveMenu(null)}>{item.title}{item.menu && <ChevronDown size={11} />}</Link>
               </div>
             ))}
           </nav>
           <div className="header-actions">
-            <form action="/search" className={`search-form${searchOpen ? " search-form--open" : ""}`}>
-              <Search size={16} aria-hidden="true" />
-              <input name="q" aria-label="Search products" placeholder="Search..." onBlur={() => setSearchOpen(false)} />
-            </form>
-            <button type="button" className="icon-button search-trigger" aria-label="Open search" onClick={() => setSearchOpen(true)}><Search size={19} /></button>
-            <a className="header-phone" href="tel:+18005550184">+1 800 555 0184</a>
-            <Link className="header-account" href="/account">Account</Link>
-            <Link className="cart-link" href="/cart" aria-label={`Cart, ${cartCount} items`}>
-              <ShoppingBag size={19} aria-hidden="true" /><span>Cart</span><b aria-live="polite">{cartCount}</b>
-            </Link>
+            <button className="icon-button search-trigger" aria-label="Search" onClick={() => setSearchOpen(true)}><Search size={19} /><span>SEARCH</span></button>
+            <Link className="icon-button account-link" href="/account" aria-label="Account"><span>ACCOUNT</span></Link>
+            <button className="icon-button bag-trigger" aria-label={`Open bag, ${cart?.totalQuantity ?? 0} items`} onClick={openCart}>
+              <ShoppingBag size={19} /><span>BAG</span><span className="bag-count">{cart?.totalQuantity ?? 0}</span>
+            </button>
           </div>
         </div>
-        <div className={`mobile-menu${menuOpen ? " mobile-menu--open" : ""}`} aria-hidden={!menuOpen} inert={!menuOpen}>
-          <nav aria-label="Mobile navigation">
-            {navigation.map((item, index) => (
-              <Link key={item.title} href={item.href} style={{ ["--menu-index" as string]: index }} onClick={() => setMenuOpen(false)}>
-                <span>{item.title}</span><span aria-hidden="true">↗</span>
+        <AnimatePresence>
+          {activeMenu && (
+            <motion.div className="mega-menu" initial={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : -8 }} transition={{ duration: reduceMotion ? 0 : 0.18 }} onMouseEnter={() => setActiveMenu(activeMenu)}>
+              <div className="mega-menu-links">
+                <span className="eyebrow">DISCOVER {activeMenu.toUpperCase()}</span>
+                {menuContent[activeMenu]?.map((link) => <Link key={link.label} href={link.href} onClick={() => setActiveMenu(null)}>{link.label}<ArrowRight size={14} /></Link>)}
+              </div>
+              <Link className="mega-menu-feature" href={activeMenu === "women" ? `/collections/${collectionHandles.women}` : `/collections/${collectionHandles.men}`}>
+                <div className={`mega-menu-image ${activeMenu}`} />
+                <span>Tradition, in a new light <ArrowRight size={14} /></span>
               </Link>
-            ))}
-            <Link href="/account" onClick={() => setMenuOpen(false)}>My account <span aria-hidden="true">↗</span></Link>
-            <a href="tel:+18005550184">Call us <span aria-hidden="true">↗</span></a>
-          </nav>
-          <p>Grüß Gott. Stay a little.</p>
-        </div>
+              <div className="mega-menu-note"><span className="eyebrow">THE ALPINE EDIT</span><p>Pieces to be worn, remembered, and passed on.</p><Link href="/about" onClick={() => setActiveMenu(null)}>Our point of view <ArrowRight size={14} /></Link></div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
-      <style>{`
-        .site-header { position: sticky; top: 0; z-index: 40; background: rgba(246,240,228,.97); border-bottom: 1px dashed rgba(122,74,37,.4); backdrop-filter: blur(14px); }
-        .header-inner { display:flex; min-height:74px; align-items:center; justify-content:space-between; gap:1.2rem; }
-        .brand-mark { display:flex; flex:0 0 auto; align-items:center; gap:.45rem; font-size:14px; font-weight:800; letter-spacing:.12em; }
-        .brand-mark__crest { display:grid; width:29px; height:29px; place-items:center; border-radius:50%; background:var(--hops); color:var(--gold); font-size:17px; }
-        .brand-mark__name { max-width:170px; font-size:11px; line-height:1.15; text-transform:uppercase; }
-        .brand-mark__logo { width:auto; max-width:148px; height:auto; max-height:44px; object-fit:contain; }
-        .desktop-nav { display:flex; height:74px; align-items:center; gap:clamp(.65rem,1.35vw,1.5rem); }
-        .nav-item { height:100%; display:flex; align-items:center; }
-        .nav-link { position:relative; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-        .nav-link::after { position:absolute; right:0; bottom:-7px; left:0; height:1px; content:""; background:var(--gold); transform:scaleX(0); transform-origin:left; transition:transform .2s; }
-        .nav-item:hover .nav-link::after,.nav-item:focus-within .nav-link::after { transform:scaleX(1); }
-        .mega-menu { position:absolute; top:100%; left:0; display:grid; width:100%; grid-template-columns:1fr 2fr 1fr; gap:3rem; padding:2.5rem max(calc((100vw - 1200px)/2), 3rem); background:var(--cream); border-bottom:1px dashed var(--pretzel); opacity:0; visibility:hidden; transform:translateY(-8px); transition:.18s; }
-        .nav-item:hover .mega-menu,.nav-item:focus-within .mega-menu { opacity:1; visibility:visible; transform:translateY(0); }
-        .mega-menu__links { display:grid; grid-template-columns:repeat(2,minmax(120px,1fr)); gap:.8rem 2rem; }
-        .mega-menu__link { display:flex; justify-content:space-between; font-size:13px; }
-        .mega-menu__link span { color:var(--pretzel); opacity:0; transition:opacity .2s; }
-        .mega-menu__link:hover span { opacity:1; }
-        .mega-menu__note { margin:0; color:var(--hops); font-size:2rem; line-height:1; }
-        .header-actions { display:flex; align-items:center; gap:1rem; }
-        .icon-button { display:grid; width:40px; height:40px; place-items:center; border:0; background:transparent; cursor:pointer; }
-        .search-form { display:flex; width:38px; height:38px; align-items:center; overflow:hidden; gap:.5rem; border:1px solid transparent; border-radius:99px; padding:0 .6rem; transition:width .2s,border-color .2s; }
-        .search-form:focus-within { width:160px; border-color:var(--line); }
-        .search-form input { width:100px; border:0; outline:0; background:transparent; font-size:12px; }
-        .search-form input::placeholder { color:var(--muted); }
-        .header-phone,.header-account { font-size:10px; font-weight:600; }
-        .cart-link { display:flex; align-items:center; gap:.4rem; font-size:10px; font-weight:700; }
-        .cart-link b { display:grid; width:20px; height:20px; place-items:center; border-radius:50%; background:var(--gold); font-size:10px; }
-        .mobile-menu-trigger,.search-trigger,.mobile-menu { display:none; }
-        @media(max-width:1100px) { .header-phone,.header-account { display:none; } .desktop-nav { gap:.7rem; } .nav-link {font-size:9px;} }
-        @media(max-width:800px) {
-          .header-inner { min-height:64px; }
-          .mobile-menu-trigger,.search-trigger { display:grid; }
-          .desktop-nav,.search-form { display:none; }
-          .header-actions { gap:.35rem; }
-          .mobile-menu { position:fixed; z-index:39; inset:64px 0 0; display:flex; visibility:hidden; flex-direction:column; justify-content:space-between; padding:2rem 24px 3rem; background:var(--cream); opacity:0; transform:translateY(-12px); transition:.25s; }
-          .mobile-menu--open { visibility:visible; opacity:1; transform:none; }
-          .mobile-menu nav { display:flex; flex-direction:column; }
-          .mobile-menu nav a { display:flex; align-items:center; justify-content:space-between; border-bottom:1px dashed var(--line); padding:1rem 0; font-family:var(--font-display); font-size:clamp(2rem,10vw,3rem); animation:enter .35s both; animation-delay:calc(var(--menu-index,6)*35ms); }
-          .mobile-menu nav a span+span { color:var(--gold); font-family:var(--font-ui); font-size:1.2rem; }
-          .mobile-menu p { font-family:var(--font-display); font-size:1.3rem; color:var(--hops); }
-          @keyframes enter { from {opacity:0;transform:translateY(8px)} to {opacity:1;transform:none} }
-        }
-        @media(prefers-reduced-motion:reduce) { .mobile-menu nav a { animation:none; } }
-      `}</style>
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.nav className="mobile-drawer" initial={{ x: reduceMotion ? 0 : "-100%" }} animate={{ x: 0 }} exit={{ x: reduceMotion ? 0 : "-100%" }} transition={{ duration: reduceMotion ? 0 : 0.28 }} aria-label="Mobile navigation">
+            <div className="mobile-drawer-top"><span className="eyebrow">THE COLLECTIONS</span><button className="icon-button" aria-label="Close menu" onClick={() => setMobileOpen(false)}><X size={21} /></button></div>
+            {navItems.map((item, index) => item.menu ? (
+              <details className="mobile-nav-group" key={item.title}>
+                <summary><span className="mobile-index">0{index + 1}</span>{item.title}<ChevronDown size={17} /></summary>
+                <div>{menuContent[item.menu].map((link) => <Link key={link.label} href={link.href} onClick={() => setMobileOpen(false)}>{link.label}<ArrowRight size={14} /></Link>)}</div>
+              </details>
+            ) : (
+              <Link key={item.title} href={item.href} onClick={() => setMobileOpen(false)}><span className="mobile-index">0{index + 1}</span>{item.title}<ArrowRight size={17} /></Link>
+            ))}
+            <div className="mobile-drawer-foot"><Link href="/about">Our story</Link><span>MADE FOR THE MOMENT</span></div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} shopifyConfigured={shopifyConfigured} />
     </>
   );
 }

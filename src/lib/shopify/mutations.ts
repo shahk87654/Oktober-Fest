@@ -1,55 +1,57 @@
-export const CART_FRAGMENT = `fragment CartFields on Cart {
-  id checkoutUrl totalQuantity
-  buyerIdentity { countryCode }
-  cost { subtotalAmount { amount currencyCode } totalAmount { amount currencyCode } }
-  lines(first: 100) {
-    nodes {
-      id quantity
-      merchandise {
-        ... on ProductVariant {
-          id title selectedOptions { name value }
-          product { title handle featuredImage { url altText width height } }
-          price { amount currencyCode }
+export const CART_CREATE_SIMPLE = `#graphql
+  mutation CartCreate($input: CartInput!) {
+    cartCreate(input: $input) {
+      cart {
+        id
+        checkoutUrl
+        totalQuantity
+        cost { subtotalAmount { amount currencyCode } totalAmount { amount currencyCode } }
+        lines(first: 50) {
+          nodes {
+            id
+            quantity
+            merchandise {
+              ... on ProductVariant {
+                id title availableForSale sku
+                price { amount currencyCode }
+                compareAtPrice { amount currencyCode }
+                selectedOptions { name value }
+                image { url altText width height }
+                product { handle title vendor featuredImage { url altText width height } }
+              }
+            }
+            cost { amountPerQuantity { amount currencyCode } totalAmount { amount currencyCode } }
+          }
         }
       }
-      cost { totalAmount { amount currencyCode } }
-      attributes { key value }
+      userErrors { field message }
     }
   }
-}`;
+`;
 
-const CART_USER_ERRORS = `userErrors { field message code }`;
-
-export const CART_QUERY = `query Cart($id: ID!) {
-  cart(id: $id) { ...CartFields }
-}
-${CART_FRAGMENT}`;
-
-export const CART_CREATE_MUTATION = `mutation CartCreate($input: CartInput!) {
-  cartCreate(input: $input) { cart { ...CartFields } ${CART_USER_ERRORS} }
-}
-${CART_FRAGMENT}`;
-
-export const CART_LINES_ADD_MUTATION = `mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
-  cartLinesAdd(cartId: $cartId, lines: $lines) { cart { ...CartFields } ${CART_USER_ERRORS} }
-}
-${CART_FRAGMENT}`;
-
-export const CART_LINES_UPDATE_MUTATION = `mutation CartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
-  cartLinesUpdate(cartId: $cartId, lines: $lines) { cart { ...CartFields } ${CART_USER_ERRORS} }
-}
-${CART_FRAGMENT}`;
-
-export const CART_LINES_REMOVE_MUTATION = `mutation CartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
-  cartLinesRemove(cartId: $cartId, lineIds: $lineIds) { cart { ...CartFields } ${CART_USER_ERRORS} }
-}
-${CART_FRAGMENT}`;
-
-export const CART_BUYER_IDENTITY_UPDATE_MUTATION = `mutation CartBuyerIdentityUpdate(
-  $cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!
-) {
-  cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
-    cart { ...CartFields } ${CART_USER_ERRORS}
+export const CART_LINES_ADD = `#graphql
+  mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+    cartLinesAdd(cartId: $cartId, lines: $lines) {
+      cart { id checkoutUrl totalQuantity }
+      userErrors { field message }
+    }
   }
-}
-${CART_FRAGMENT}`;
+`;
+
+export const CART_LINES_UPDATE = `#graphql
+  mutation CartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+    cartLinesUpdate(cartId: $cartId, lines: $lines) {
+      cart { id checkoutUrl totalQuantity }
+      userErrors { field message }
+    }
+  }
+`;
+
+export const CART_LINES_REMOVE = `#graphql
+  mutation CartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+      cart { id checkoutUrl totalQuantity }
+      userErrors { field message }
+    }
+  }
+`;
