@@ -198,6 +198,15 @@ export function ProductDetails({
     recommendationType === "ALL"
       ? recommendations
       : recommendations.filter((item) => item.productType === recommendationType);
+  const upsellRecommendations = recommendations
+    .filter((item) => {
+      const itemPrice = item.priceRange.minVariantPrice;
+      return item.availableForSale
+        && itemPrice.currencyCode === price.currencyCode
+        && Number(itemPrice.amount) > Number(price.amount);
+    })
+    .sort((a, b) => Number(a.priceRange.minVariantPrice.amount) - Number(b.priceRange.minVariantPrice.amount))
+    .slice(0, 4);
 
   function isOptionValueAvailable(name: string, value: string) {
     return variants.some(
@@ -515,14 +524,19 @@ export function ProductDetails({
             </div>
 
             {acceptedPayments.length > 0 && (
-              <p className="atelier-payments">
-                ACCEPTED PAYMENT METHODS: <span>{acceptedPayments.join(" • ")}</span>
-              </p>
+              <div className="atelier-payments" aria-label="Accepted payment methods">
+                <span className="atelier-payments-label">ACCEPTED PAYMENT METHODS</span>
+                <ul>
+                  {acceptedPayments.map((method) => (
+                    <li key={method}>{method}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </section>
 
-        {/* Specifications & Accordion Cards */}
+        {/* Product story and service details */}
         <div className="atelier-product-extras">
           <section className="atelier-record-section" aria-labelledby="atelier-record-title">
             <div className="atelier-record-intro">
@@ -631,6 +645,88 @@ export function ProductDetails({
               </article>
             </div>
           </section>
+
+          <div className="atelier-story-grid">
+            <section className="atelier-promise-section" aria-labelledby="atelier-promise-title">
+              <div className="atelier-extra-icon">
+                <ShieldCheck size={20} />
+              </div>
+              <span className="eyebrow">
+                <i /> ATELIER PROMISE / AUTHENTICITY
+              </span>
+              <h2 id="atelier-promise-title">
+                A story you can <em>trust.</em>
+              </h2>
+              <p>
+                Every piece is presented with a clear atelier record, including its maker, category, style code, and origin,
+                so you can shop with confidence.
+              </p>
+              <Link href="/policies/refund-policy" className="atelier-extra-link">
+                <span>OUR CUSTOMER PROMISE</span>
+                <ArrowRight size={14} />
+              </Link>
+            </section>
+
+            <section className="atelier-styling-section" aria-labelledby="atelier-styling-title">
+              <div className="atelier-extra-icon">
+                <Sparkles size={20} />
+              </div>
+              <span className="eyebrow">
+                <i /> STYLING &amp; OCCASION GUIDE
+              </span>
+              <h2 id="atelier-styling-title">
+                Made for <em>good company.</em>
+              </h2>
+              <p>
+                Wear {product.title} to festive gatherings, weddings, and special celebrations. Keep accessories
+                considered and let the craftsmanship take center stage.
+              </p>
+              <Link href="/collections" className="atelier-extra-link">
+                <span>EXPLORE THE COLLECTION</span>
+                <ArrowRight size={14} />
+              </Link>
+            </section>
+
+            <section className="atelier-highlights-section" aria-labelledby="atelier-highlights-title">
+              <div className="atelier-extra-icon">
+                <ScanLine size={20} />
+              </div>
+              <span className="eyebrow">
+                <i /> PRODUCT DETAILS / HIGHLIGHTS
+              </span>
+              <h2 id="atelier-highlights-title">
+                The details, <em>at a glance.</em>
+              </h2>
+              <dl className="atelier-highlights-grid">
+                <div>
+                  <dt>STYLE CODE</dt>
+                  <dd>{selectedVariant?.sku || variants[0]?.sku || "Atelier edition"}</dd>
+                </div>
+                <div>
+                  <dt>GARMENT TYPE</dt>
+                  <dd>{product.productType || "Traditional Bavarian attire"}</dd>
+                </div>
+                <div>
+                  <dt>OPTIONS</dt>
+                  <dd>
+                    {product.options.length
+                      ? product.options.map((option) => option.name).join(" · ")
+                      : "One considered edition"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>AVAILABILITY</dt>
+                  <dd>
+                    {selectedVariant
+                      ? selectedVariant.availableForSale
+                        ? "Available to order"
+                        : "Currently unavailable"
+                      : "Select an option to check"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
         </div>
 
         {/* Customer Reviews Section */}
@@ -690,6 +786,31 @@ export function ProductDetails({
             </button>
           )}
         </section>
+
+        {upsellRecommendations.length > 0 && (
+          <section className="atelier-upsell section" aria-labelledby="atelier-upsell-title">
+            <div className="atelier-lower-heading">
+              <div>
+                <span className="eyebrow">
+                  <i /> THE ATELIER UPGRADE
+                </span>
+                <h2 id="atelier-upsell-title">
+                  Discover something <em>exceptional.</em>
+                </h2>
+                <p>Explore elevated pieces selected at a higher price point than this style.</p>
+              </div>
+              <span className="atelier-lower-count">{upsellRecommendations.length} UPGRADES</span>
+            </div>
+            <div className="product-grid">
+              {upsellRecommendations.map((item) => (
+                <div className="atelier-upsell-card" key={item.id}>
+                  <span>AN ELEVATED EDIT</span>
+                  <ProductCard product={item} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Recommendations Grid */}
         {recommendations.length > 0 && (

@@ -133,29 +133,21 @@ export default async function CollectionPage({
         </div>
 
         {collection.products.nodes.length ? (
-          <div className="collection-layout">
-            <aside className="collection-sidebar">
-              <span className="eyebrow">
-                <i /> REFINE PIECES
-              </span>
-              <CollectionControls filters={availableFilters} activeFilters={rawFilters} sort={sort} />
-            </aside>
-            <div className="collection-results">
-              <div className="product-grid">
-                {collection.products.nodes.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              {collection.products.pageInfo?.hasNextPage && (
-                <div className="collection-pagination">
-                  <span className="text-xs text-slate-500 font-semibold">SHOWING {count} PIECES</span>
-                  <Link className="button button-outline" href={`${canonicalPath}?${nextParams.toString()}`}>
-                    <span>LOAD MORE PIECES</span>
-                    <ArrowRight size={14} />
-                  </Link>
-                </div>
-              )}
+          <div className="collection-results">
+            <div className="product-grid">
+              {collection.products.nodes.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
+            {collection.products.pageInfo?.hasNextPage && (
+              <div className="collection-pagination">
+                <span className="text-xs text-slate-500 font-semibold">SHOWING {count} PIECES</span>
+                <Link className="button button-outline" href={`${canonicalPath}?${nextParams.toString()}`}>
+                  <span>LOAD MORE PIECES</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <div className="collection-empty text-center py-16">

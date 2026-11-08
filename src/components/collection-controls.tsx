@@ -43,10 +43,12 @@ export function CollectionControls({
           type="button"
           className="filter-toggle"
           onClick={() => setOpen(true)}
+          aria-expanded={open}
+          aria-haspopup="dialog"
         >
           <SlidersHorizontal size={14} className="text-emerald-800" />
-          <span>FILTER &amp; SORT</span>
-          {activeFilters.length > 0 && <span>{activeFilters.length}</span>}
+          <span className="filter-toggle-label">FILTER &amp; SORT</span>
+          {activeFilters.length > 0 && <span className="filter-count">{activeFilters.length}</span>}
         </button>
 
         <label className="sort-control">
@@ -63,26 +65,6 @@ export function CollectionControls({
           </select>
           <ChevronDown size={14} />
         </label>
-      </div>
-
-      <div className="filter-sidebar">
-        {filters.map((filter) => (
-          <FilterGroup
-            key={filter.id}
-            filter={filter}
-            activeFilters={activeFilters}
-            onToggle={(value) => {
-              const next = new Set(activeFilters);
-              if (next.has(value)) next.delete(value);
-              else next.add(value);
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete("after");
-              params.delete("filter");
-              for (const selected of next) params.append("filter", selected);
-              router.push(`?${params.toString()}`, { scroll: false });
-            }}
-          />
-        ))}
       </div>
 
       {open && (
