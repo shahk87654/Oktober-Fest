@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { CollectionControls } from "@/components/collection-controls";
 import { ProductCard } from "@/components/product-card";
 import { collectionHandles } from "@/lib/config";
@@ -45,7 +45,21 @@ export default async function CollectionPage({
   searchParams: Promise<SearchParams>;
 }) {
   const [{ handle }, query] = await Promise.all([params, searchParams]);
-  if (!isShopifyConfigured()) return <main className="store-setup"><span className="eyebrow">LIVE FROM THE ATELIER</span><h1>A collection<br /><em>in the making.</em></h1><p>Connect Shopify to bring this collection, its pieces and current availability into the storefront.</p></main>;
+  if (!isShopifyConfigured()) {
+    return (
+      <main className="store-setup flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <span className="eyebrow">
+          <i /> LIVE FROM THE ATELIER
+        </span>
+        <h1 className="font-serif text-3xl sm:text-5xl font-medium mt-3 mb-2 text-slate-900">
+          A collection <em>in the making.</em>
+        </h1>
+        <p className="text-slate-500 max-w-md">
+          Connect your Shopify catalog to browse this collection, pieces, and current availability.
+        </p>
+      </main>
+    );
+  }
 
   const sort = typeof query.sort === "string" && sorts[query.sort] ? query.sort : "featured";
   const after = typeof query.after === "string" ? query.after : null;
@@ -71,29 +85,96 @@ export default async function CollectionPage({
   for (const raw of rawFilters) nextParams.append("filter", raw);
   if (collection.products.pageInfo?.endCursor) nextParams.set("after", collection.products.pageInfo.endCursor);
 
-  return <main className="collection-page">
-    <div className="collection-breadcrumb"><Link href="/">HOME</Link><span>/</span><Link href="/collections">COLLECTIONS</Link><span>/</span><span>{collection.title.toUpperCase()}</span></div>
-    <header className="collection-hero">
-      <div className="collection-title-block">
-        <span className="eyebrow">{knownCollection ? "THE ALPINE ATELIER EDIT" : "THE COLLECTION"}</span>
-        <h1>{collection.title}<em>.</em></h1>
-        <p>{collection.description || "A considered selection from the Alpine Atelier."}</p>
-        <span className="collection-hero-index">COLLECTION / {collection.handle.toUpperCase()}</span>
+  return (
+    <main className="collection-page">
+      <div className="collection-breadcrumb">
+        <Link href="/" className="hover:text-emerald-800">Home</Link>
+        <span>/</span>
+        <Link href="/collections" className="hover:text-emerald-800">Collections</Link>
+        <span>/</span>
+        <span className="text-slate-900 font-bold">{collection.title}</span>
       </div>
-      {collection.image && <div className="collection-hero-image"><Image src={imageUrl(collection.image.url, 1500)} alt={collection.image.altText ?? collection.title} fill priority sizes="(max-width: 700px) 100vw, 60vw" /></div>}
-    </header>
-    <div className="collection-content">
-      <div className="collection-results-bar">
-        <div className="collection-count"><span className="collection-result-number">{String(count).padStart(2, "0")}{collection.products.pageInfo?.hasNextPage ? "+" : ""}</span><span>{count === 1 ? "PIECE" : "PIECES"} <i /> {collection.products.pageInfo?.hasNextPage ? "FIRST EDIT" : "IN THIS EDIT"}</span></div>
-        <CollectionControls filters={availableFilters} activeFilters={rawFilters} sort={sort} />
-      </div>
-      {collection.products.nodes.length ? <div className="collection-layout">
-        <aside className="collection-sidebar"><span className="eyebrow">REFINE YOUR EDIT</span><CollectionControls filters={availableFilters} activeFilters={rawFilters} sort={sort} /></aside>
-        <div className="collection-results">
-          <div className="product-grid">{collection.products.nodes.map((product) => <ProductCard key={product.id} product={product} />)}</div>
-          {collection.products.pageInfo?.hasNextPage && <div className="collection-pagination"><span>SHOWING {count} PIECES</span><Link className="button button-outline" href={`${canonicalPath}?${nextParams.toString()}`}>LOAD MORE PIECES <ArrowRight size={15} /></Link></div>}
+
+      <header className="collection-hero">
+        <div className="collection-title-block">
+          <span className="eyebrow">
+            <i /> {knownCollection ? "OKTOBERFEST 2026 EDIT" : "ATELIER SELECTION"}
+          </span>
+          <h1>{collection.title}<em>.</em></h1>
+          <p>{collection.description || "A considered selection of handcrafted Bavarian styles."}</p>
+          <span className="collection-hero-index">
+            {count} {count === 1 ? "PIECE AVAILABLE" : "PIECES AVAILABLE"}
+          </span>
         </div>
-      </div> : <div className="collection-empty"><span className="eyebrow">NOTHING HERE JUST YET</span><h2>This edit is <em>between seasons.</em></h2><Link href="/collections" className="text-link">EXPLORE OTHER COLLECTIONS <ArrowRight size={14} /></Link></div>}
-    </div>
-  </main>;
+        {collection.image && (
+          <div className="collection-hero-image">
+            <Image
+              src={imageUrl(collection.image.url, 1500)}
+              alt={collection.image.altText ?? collection.title}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 55vw"
+            />
+          </div>
+        )}
+      </header>
+
+      <div className="collection-content">
+        <div className="collection-results-bar">
+          <div className="collection-count">
+            <span className="collection-result-number">
+              {String(count).padStart(2, "0")}{collection.products.pageInfo?.hasNextPage ? "+" : ""}
+            </span>
+            <span className="text-slate-500 font-semibold text-xs tracking-wider">
+              {count === 1 ? "PIECE" : "PIECES"} IN THIS EDIT
+            </span>
+          </div>
+          <CollectionControls filters={availableFilters} activeFilters={rawFilters} sort={sort} />
+        </div>
+
+        {collection.products.nodes.length ? (
+          <div className="collection-layout">
+            <aside className="collection-sidebar">
+              <span className="eyebrow">
+                <i /> REFINE PIECES
+              </span>
+              <CollectionControls filters={availableFilters} activeFilters={rawFilters} sort={sort} />
+            </aside>
+            <div className="collection-results">
+              <div className="product-grid">
+                {collection.products.nodes.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              {collection.products.pageInfo?.hasNextPage && (
+                <div className="collection-pagination">
+                  <span className="text-xs text-slate-500 font-semibold">SHOWING {count} PIECES</span>
+                  <Link className="button button-outline" href={`${canonicalPath}?${nextParams.toString()}`}>
+                    <span>LOAD MORE PIECES</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="collection-empty text-center py-16">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-3">
+              <Sparkles size={28} />
+            </div>
+            <span className="eyebrow">
+              <i /> ARCHIVE EDIT
+            </span>
+            <h2 className="font-serif text-3xl font-medium mt-2 mb-3">
+              This edit is <em>between seasons.</em>
+            </h2>
+            <Link href="/collections" className="button button-dark inline-flex items-center gap-2">
+              <span>EXPLORE ALL COLLECTIONS</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }

@@ -19,7 +19,9 @@ export function RecentlyViewedProducts({ currentHandle }: { currentHandle: strin
     try {
       const saved: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
       if (Array.isArray(saved)) {
-        handles = saved.filter((handle): handle is string => typeof handle === "string" && handle !== currentHandle).slice(0, 5);
+        handles = saved
+          .filter((handle): handle is string => typeof handle === "string" && handle !== currentHandle)
+          .slice(0, 4);
       }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify([currentHandle, ...handles].slice(0, 5)));
     } catch (error) {
@@ -47,15 +49,21 @@ export function RecentlyViewedProducts({ currentHandle }: { currentHandle: strin
     <section className="section recently-viewed" aria-labelledby="recently-viewed-title">
       <header className="recently-viewed-heading">
         <div>
-          <span className="eyebrow"><Clock3 size={13} /> YOUR ATELIER TRAIL</span>
-          <h2 id="recently-viewed-title">Still on <em>your mind?</em></h2>
+          <span className="eyebrow">
+            <Clock3 size={13} /> RECENTLY EXPLORED
+          </span>
+          <h2 id="recently-viewed-title">
+            Still on <em>your mind?</em>
+          </h2>
         </div>
-        <Link href="/collections" className="text-link">EXPLORE ALL PIECES <ArrowRight size={14} /></Link>
+        <Link href="/collections" className="text-link">
+          <span>ALL PIECES</span>
+          <ArrowRight size={14} />
+        </Link>
       </header>
       <div className="product-grid">
-        {products.map((product, index) => (
+        {products.map((product) => (
           <div className="recently-viewed-card" key={product.id}>
-            <span className="recently-viewed-index">VIEWED / {String(index + 1).padStart(2, "0")}</span>
             <ProductCard product={product} />
           </div>
         ))}

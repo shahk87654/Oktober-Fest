@@ -1,39 +1,46 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { isShopifyConfigured } from "@/lib/shopify/client";
 import { getCollections } from "@/lib/shopify/collections";
-import { imageUrl } from "@/lib/format";
+import { CollectionsCatalog } from "@/components/collections-catalog";
 
-export const metadata: Metadata = { title: "Collections", description: "Explore the Alpine Atelier collection." };
+export const metadata: Metadata = {
+  title: "Bavarian Collections Archive | Alpine Atelier",
+  description:
+    "Explore the complete collection of authentic Bavarian Trachten, wild-buckskin lederhosen, silk-jacquard dirndls, and heirloom accessories for Oktoberfest 2026.",
+  alternates: {
+    canonical: "/collections",
+  },
+  openGraph: {
+    title: "Bavarian Collections Archive | Alpine Atelier",
+    description:
+      "Explore handcrafted Alpine Trachten, bespoke lederhosen, and couture dirndls curated for Munich Oktoberfest 2026.",
+  },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function CollectionsPage() {
-  if (!isShopifyConfigured()) return <main className="store-setup"><span className="eyebrow">LIVE FROM THE ATELIER</span><h1>Collections <em>await.</em></h1><p>Connect Shopify to browse collections managed in your store.</p></main>;
+  if (!isShopifyConfigured()) {
+    return (
+      <main className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 bg-[#FAFAF8]">
+        <span className="px-3 py-1 rounded-full bg-emerald-950/5 border border-emerald-900/10 text-emerald-950 text-xs font-semibold tracking-widest uppercase mb-4">
+          Live From The Atelier
+        </span>
+        <h1 className="font-serif text-3xl sm:text-5xl font-medium text-slate-900 mb-3">
+          Collections <span className="italic">await.</span>
+        </h1>
+        <p className="text-slate-500 max-w-md text-sm sm:text-base mb-6">
+          Connect your Shopify store credentials to browse live collections managed in your catalog.
+        </p>
+      </main>
+    );
+  }
+
   const collections = await getCollections();
-  const [featuredCollection, ...otherCollections] = collections;
-  return <main className="all-collections-page">
-    <header className="collections-masthead">
-      <div className="collections-masthead-title"><span className="eyebrow">THE ALPINE ATELIER / COLLECTION INDEX</span><h1>Wardrobe, <em>in chapters.</em></h1></div>
-      <div className="collections-masthead-note"><p>Explore considered edits, arranged directly from the live Shopify catalog.</p><span>{String(collections.length).padStart(2, "0")} COLLECTIONS <i /> UPDATED LIVE</span></div>
-    </header>
-    {featuredCollection ? <>
-      <Link href={`/collections/${featuredCollection.handle}`} className="collections-featured">
-        <div className="collections-featured-image">
-          {featuredCollection.image && <Image src={imageUrl(featuredCollection.image.url, 1800)} alt={featuredCollection.image.altText ?? featuredCollection.title} fill priority sizes="(max-width: 700px) 100vw, 68vw" />}
-          <span className="collections-featured-index">01 / FEATURED EDIT</span>
-          <span className="collections-featured-open"><ArrowUpRight size={19} /></span>
-          <div className="collections-featured-copy"><span>THE ATELIER PRESENTS</span><h2>{featuredCollection.title}<i>.</i></h2><p>{featuredCollection.description || "A considered edit from the Alpine Atelier."}</p><span className="collections-featured-cta">DISCOVER THE COLLECTION <ArrowUpRight size={15} /></span></div>
-        </div>
-      </Link>
-      {otherCollections.length > 0 && <section className="collections-index" aria-labelledby="collections-index-title">
-        <header className="collections-index-heading"><div><span className="eyebrow">FIND YOUR OWN COMBINATION</span><h2 id="collections-index-title">The collection <em>index.</em></h2></div><span>{String(otherCollections.length).padStart(2, "0")} MORE EDITS</span></header>
-        <div className="all-collections-grid">{otherCollections.map((collection, index) => <Link href={`/collections/${collection.handle}`} className="all-collection-card" key={collection.id}>
-          <div className="all-collection-image">{collection.image && <Image src={imageUrl(collection.image.url, 900)} alt={collection.image.altText ?? collection.title} fill sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw" />}<span>{String(index + 2).padStart(2, "0")}</span><ArrowUpRight size={18} /></div>
-          <div className="all-collection-card-copy"><h3>{collection.title}</h3><p>{collection.description}</p><span>EXPLORE EDIT <ArrowUpRight size={13} /></span></div>
-        </Link>)}</div>
-      </section>}
-    </> : <p className="empty-collection">No collections are currently published.</p>}
-  </main>;
+
+  return (
+    <main>
+      <CollectionsCatalog collections={collections} />
+    </main>
+  );
 }
