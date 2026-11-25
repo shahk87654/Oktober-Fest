@@ -2,35 +2,27 @@
 @import "tailwindcss";
 
 :root {
-  /* Ultra-Modern Light Luxury Palette */
-  --bg-canvas: #fafaf8;
+  /* Alpine Atelier premium palette */
+  --bg-canvas: #ffffff;
   --bg-surface: #ffffff;
-  --bg-subtle: #f4f4f1;
-  --bg-hover: #ecebe7;
-  
-  /* Brand Accents: Bavarian Alpine Emerald & Champagne */
-  --brand-emerald: #0d3b2e;
-  --brand-forest: #134e3f;
-  --brand-accent: #059669;
-  --brand-accent-glow: rgba(5, 150, 105, 0.12);
-  --brand-gold: #c5a880;
-  --brand-gold-light: #f5efeb;
-  
-  /* Text & Ink */
-  --ink: #0f172a;
-  --ink-secondary: #334155;
-  --muted: #64748b;
-  --muted-light: #94a3b8;
-  
-  /* Lines & Borders */
-  --line: rgba(15, 23, 42, 0.08);
-  --line-strong: rgba(15, 23, 42, 0.16);
-  --line-focus: #0d3b2e;
-  
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --bg-subtle: #f3ebdd;
+  --bg-hover: #ebe1cf;
+  --brand-emerald: #6b7a3a;
+  --brand-forest: #58652f;
+  --brand-accent: #6b4226;
+  --brand-accent-glow: rgba(107, 66, 38, 0.12);
+  --brand-gold: #b22a2a;
+  --brand-gold-light: #f3ebdd;
+  --ink: #111111;
+  --ink-secondary: #2b2b28;
+  --muted: #68665f;
+  --muted-light: #98958d;
+  --line: rgba(17, 17, 17, 0.10);
+  --line-strong: rgba(17, 17, 17, 0.18);
+  --line-focus: #6b4226;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-full: 9999px;
   
   /* Shadows */
@@ -88,8 +80,38 @@ img {
 }
 
 ::selection {
-  background: var(--brand-emerald);
+  background: var(--brand-accent);
   color: #ffffff;
+}
+
+/* Shared Tailwind accent normalization */
+.text-emerald-950,
+.text-emerald-900,
+.text-emerald-800,
+.text-emerald-700,
+.text-slate-900,
+.text-slate-800,
+.text-slate-700 {
+  color: var(--ink) !important;
+}
+
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500,
+.text-emerald-600,
+.text-slate-500,
+.text-slate-400 {
+  color: var(--muted) !important;
+}
+
+.bg-emerald-950,
+.bg-emerald-900,
+.bg-emerald-800,
+.bg-emerald-700,
+.hover\:bg-emerald-950:hover,
+.hover\:bg-emerald-900:hover,
+.hover\:bg-emerald-800:hover {
+  background-color: var(--ink) !important;
 }
 
 /* Base Utility & Typography */
@@ -108,7 +130,7 @@ img {
   display: inline-block;
   width: 5px;
   height: 5px;
-  background: var(--brand-accent);
+  background: var(--brand-gold);
   border-radius: 50%;
 }
 
@@ -244,7 +266,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: var(--brand-emerald);
+  background: var(--ink);
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;
@@ -300,7 +322,7 @@ img {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.22em;
-  color: var(--brand-emerald);
+  color: var(--ink);
 }
 
 .wordmark-bottom {
@@ -379,7 +401,7 @@ img {
   padding: 0 6px;
   place-items: center;
   border-radius: var(--radius-full);
-  background: var(--brand-emerald);
+  background: var(--brand-gold);
   color: #ffffff;
   font-size: 10px;
   font-weight: 800;
@@ -1117,19 +1139,19 @@ img {
 .home-banner-carousel {
   position: relative;
   width: min(100% - 48px, 1600px);
-  margin: 20px auto 0;
-  border-radius: 24px;
+  margin: 16px auto 0;
+  border-radius: 4px;
   overflow: hidden;
-  background: var(--brand-emerald);
-  box-shadow: var(--shadow-card);
+  background: var(--ink);
+  box-shadow: none;
 }
 
 .home-banner-stage {
   position: relative;
   width: 100%;
-  height: clamp(500px, 66vw, 760px);
-  max-height: calc(100svh - 140px);
-  min-height: 500px;
+  height: clamp(460px, 58vw, 680px);
+  max-height: calc(100svh - 150px);
+  min-height: 460px;
   overflow: hidden;
 }
 
@@ -1153,7 +1175,7 @@ img {
 .home-banner-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, rgba(7, 27, 21, 0.2), transparent 32%);
+  background: linear-gradient(0deg, rgba(17, 17, 17, 0.18), transparent 38%);
 }
 
 .home-banner-controls button:focus-visible {
@@ -1171,7 +1193,7 @@ img {
   gap: 8px;
   padding: 7px 10px;
   border-radius: var(--radius-full);
-  background: rgba(10, 32, 25, 0.64);
+  background: rgba(17, 17, 17, 0.72);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.24);
   color: #ffffff;
@@ -1217,6 +1239,47 @@ img {
 }
 
 /* Sections */
+.home-trust-strip {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.home-trust-grid {
+  width: min(100% - 48px, 1440px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.home-trust-item {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px;
+  border-right: 1px solid var(--line);
+  color: var(--brand-accent);
+}
+
+.home-trust-item:first-child {
+  border-left: 1px solid var(--line);
+}
+
+.home-trust-item p {
+  margin: 0 0 2px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-trust-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .home-collection-section, .home-edit-section, .home-journal-section, .home-shopping-section, .home-values-section, .home-ritual-section {
   width: min(100% - 48px, 1440px);
   margin: 0 auto;
@@ -1234,7 +1297,7 @@ img {
 .home-section-heading h2 {
   margin: 8px 0 0;
   font-family: var(--serif);
-  font-size: clamp(38px, 4.6vw, 64px);
+  font-size: clamp(38px, 4.4vw, 62px);
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -0.03em;
@@ -1245,7 +1308,7 @@ img {
   font-family: var(--serif);
   font-weight: 400;
   font-style: italic;
-  color: var(--brand-accent);
+  color: var(--brand-emerald);
 }
 
 .home-section-heading > p, .home-edit-aside > p {
@@ -1289,10 +1352,10 @@ img {
 .home-collection-card {
   position: relative;
   display: block;
-  min-height: 480px;
-  border-radius: var(--radius-lg);
+  min-height: 500px;
+  border-radius: 2px;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1313,7 +1376,7 @@ img {
 .home-collection-card::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(13, 59, 46, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(17, 17, 17, 0.04) 20%, rgba(17, 17, 17, 0.72) 100%);
   content: "";
 }
 
@@ -1565,10 +1628,10 @@ img {
   min-height: 540px;
   margin: 40px auto;
   width: min(100% - 48px, 1440px);
-  border-radius: var(--radius-lg);
+  border-radius: 2px;
   overflow: hidden;
-  background: #ffffff;
-  box-shadow: var(--shadow-card);
+  background: var(--bg-subtle);
+  box-shadow: none;
 }
 
 .home-story-image, .home-kids-image {
@@ -1615,7 +1678,7 @@ img {
 }
 
 .home-story-copy h2 em, .home-kids-copy h2 em {
-  color: var(--brand-accent);
+  color: var(--brand-emerald);
   font-style: italic;
 }
 
@@ -1632,8 +1695,8 @@ img {
   align-items: center;
   gap: 10px;
   padding: 12px 28px;
-  border-radius: var(--radius-full);
-  background: var(--brand-emerald);
+  border-radius: 2px;
+  background: var(--ink);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -1681,7 +1744,7 @@ img {
 .home-note-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(13, 59, 46, 0.88) 0%, rgba(19, 78, 63, 0.78) 100%);
+  background: rgba(17, 17, 17, 0.72);
   backdrop-filter: blur(2px);
 }
 
@@ -1706,7 +1769,7 @@ img {
 
 .home-note-copy > p em {
   font-style: italic;
-  color: #fde68a;
+  color: #f3ebdd;
 }
 
 .home-note-copy > a {
@@ -1759,7 +1822,7 @@ img {
 
 .home-values-heading h2 em {
   font-style: italic;
-  color: var(--brand-accent);
+  color: var(--brand-emerald);
 }
 
 .home-values-grid {
@@ -1769,7 +1832,7 @@ img {
 }
 
 .home-value-card {
-  border-radius: var(--radius-md);
+  border-radius: 2px;
   padding: 36px 32px;
   background: #ffffff;
   border: 1px solid var(--line);
@@ -1822,7 +1885,7 @@ img {
 
 .home-ritual-intro h2 em {
   font-style: italic;
-  color: var(--brand-accent);
+  color: var(--brand-emerald);
 }
 
 .home-ritual-intro p {
@@ -1843,7 +1906,7 @@ img {
   align-items: center;
   gap: 20px;
   padding: 24px 28px;
-  border-radius: var(--radius-md);
+  border-radius: 2px;
   background: #ffffff;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-subtle);
@@ -1896,6 +1959,12 @@ img {
   text-align: center;
 }
 
+.home-edit-section,
+.home-values-section,
+.home-shopping-section {
+  border-top: 1px solid var(--line);
+}
+
 .home-shopping-heading h2 {
   margin: 8px 0 40px;
   font-family: var(--serif);
@@ -1905,7 +1974,7 @@ img {
 
 .home-shopping-heading h2 em {
   font-style: italic;
-  color: var(--brand-accent);
+  color: var(--brand-gold);
 }
 
 .home-shopping-grid {
@@ -1919,7 +1988,7 @@ img {
   flex-direction: column;
   align-items: center;
   padding: 32px 24px;
-  border-radius: var(--radius-md);
+  border-radius: 2px;
   background: #ffffff;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-subtle);
@@ -2062,8 +2131,8 @@ img {
   margin: 60px auto 40px;
   width: min(100% - 48px, 1440px);
   padding: 56px 48px;
-  border-radius: var(--radius-lg);
-  background: #ffffff;
+  border-radius: 2px;
+  background: var(--bg-subtle);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-card);
 }
@@ -2091,7 +2160,7 @@ img {
 
 .home-newsletter-copy h2 em {
   font-style: italic;
-  color: var(--brand-accent);
+  color: var(--brand-emerald);
 }
 
 .home-newsletter-copy p {
@@ -2131,8 +2200,8 @@ img {
   gap: 8px;
   border: 0;
   padding: 12px 24px;
-  border-radius: var(--radius-full);
-  background: var(--brand-emerald);
+  border-radius: 2px;
+  background: var(--ink);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -3723,7 +3792,7 @@ img {
    SITE FOOTER
    ========================================================================= */
 .site-footer {
-  background: #ffffff;
+  background: var(--bg-subtle);
   border-top: 1px solid var(--line);
   color: var(--ink);
   margin-top: 60px;
@@ -4083,6 +4152,15 @@ img {
    RESPONSIVE QUERIES
    ========================================================================= */
 @media (max-width: 1024px) {
+  .home-trust-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .home-trust-item:nth-child(2) {
+    border-right: 0;
+  }
+  .home-trust-item:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
   .desktop-nav {
     display: none;
   }
@@ -4184,6 +4262,19 @@ img {
 }
 
 @media (max-width: 640px) {
+  .home-trust-grid {
+    width: 100%;
+  }
+  .home-trust-item,
+  .home-trust-item:first-child {
+    min-height: 84px;
+    border-right: 0;
+    border-left: 0;
+    padding: 14px 16px;
+  }
+  .home-trust-item:nth-child(odd) {
+    border-right: 1px solid var(--line);
+  }
   .atelier-product-page {
     width: calc(100% - 32px);
     padding-top: 20px;

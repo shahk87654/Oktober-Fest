@@ -34,7 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#fafaf8] text-[#0f172a] antialiased selection:bg-[#0d3b2e] selection:text-white">
+      <body className="bg-[#FFFFFF] text-[#111111] antialiased selection:bg-[#6B4226] selection:text-white">
         <CartProvider>
           <SiteHeader shopifyConfigured={isShopifyConfigured()} />
           {children}

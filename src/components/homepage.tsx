@@ -72,34 +72,34 @@ export function HomePage({
       <HomeBannerCarousel />
 
       {/* Floating Trust Strip */}
-      <section className="w-full bg-white border-b border-slate-200/80 py-5">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div className="flex items-center justify-center gap-3">
-            <Truck size={20} className="text-emerald-700" />
-            <div className="text-left">
-              <p className="text-xs font-bold text-slate-900 tracking-wider uppercase m-0">Express Shipping</p>
-              <p className="text-[11px] text-slate-500 m-0">Direct to your doorstep worldwide</p>
+      <section className="home-trust-strip">
+        <div className="home-trust-grid">
+          <div className="home-trust-item">
+            <Truck size={20} />
+            <div>
+              <p>Express Shipping</p>
+              <span>Worldwide courier delivery</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-3">
-            <ShieldCheck size={20} className="text-emerald-700" />
-            <div className="text-left">
-              <p className="text-xs font-bold text-slate-900 tracking-wider uppercase m-0">Genuine Bavarian</p>
-              <p className="text-[11px] text-slate-500 m-0">Handcrafted heirloom quality</p>
+          <div className="home-trust-item">
+            <ShieldCheck size={20} />
+            <div>
+              <p>Genuine Bavarian</p>
+              <span>Heirloom-quality craft</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-3">
-            <Ruler size={20} className="text-emerald-700" />
-            <div className="text-left">
-              <p className="text-xs font-bold text-slate-900 tracking-wider uppercase m-0">Tailored Fit</p>
-              <p className="text-[11px] text-slate-500 m-0">Precise measurements & guidance</p>
+          <div className="home-trust-item">
+            <Ruler size={20} />
+            <div>
+              <p>Tailored Fit</p>
+              <span>Guided sizing support</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-3">
-            <Sparkles size={20} className="text-emerald-700" />
-            <div className="text-left">
-              <p className="text-xs font-bold text-slate-900 tracking-wider uppercase m-0">Oktoberfest 2026</p>
-              <p className="text-[11px] text-slate-500 m-0">Curated festive collection</p>
+          <div className="home-trust-item">
+            <Sparkles size={20} />
+            <div>
+              <p>Oktoberfest 2026</p>
+              <span>The curated festive edit</span>
             </div>
           </div>
         </div>

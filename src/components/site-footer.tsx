@@ -40,7 +40,7 @@ export function SiteFooter() {
       <div className="footer-main">
         <div className="footer-brand">
           <Link className="wordmark inline-flex flex-col items-start" href="/">
-            <span className="wordmark-top text-lg font-extrabold text-emerald-950 tracking-widest">
+            <span className="wordmark-top text-lg font-extrabold tracking-widest">
               ALPINE ATELIER
             </span>
             <span className="wordmark-bottom text-[9px] text-slate-400 font-bold tracking-widest">

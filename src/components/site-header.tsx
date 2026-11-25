@@ -55,7 +55,7 @@ export function SiteHeader({ shopifyConfigured }: { shopifyConfigured: boolean }
     <>
       <div className="announcement">
         <span className="flex items-center gap-2">
-          <Sparkles size={12} className="text-emerald-300 animate-pulse" />
+          <Sparkles size={12} className="animate-pulse" />
           <span>OKTOBERFEST 2026 COUTURE EDIT</span>
         </span>
         <span className="announcement-separator">•</span>
