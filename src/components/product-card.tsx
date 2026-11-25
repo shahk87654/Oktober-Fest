@@ -3,15 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check, Heart, Plus, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ShopifyProduct } from "@/lib/shopify/types";
 import { formatMoney, imageUrl } from "@/lib/format";
 import { useCart } from "./cart-provider";
+import { useSizeProfileStore } from "@/lib/size-profile-store";
+import { getProfileSize } from "@/lib/size-recommendation-utils";
 
 export function ProductCard({ product }: { product: ShopifyProduct }) {
   const { addLine, busy } = useCart();
   const [added, setAdded] = useState(false);
   const [favorited, setFavorited] = useState(false);
+  const profile = useSizeProfileStore((state) => state.profile);
+  const hydrate = useSizeProfileStore((state) => state.hydrate);
+
+  useEffect(() => { hydrate(); }, [hydrate]);
 
   const image = product.featuredImage ?? product.images.nodes[0];
   const secondImage = product.images.nodes.find((item) => item.url !== image?.url);
@@ -80,6 +86,13 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
 
         {/* Badges */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
+          {profile && (
+            getProfileSize(profile, product.productType, product.metafields?.find((field) => field?.key === "size_chart")?.value) && (
+              <span className="recommended-size-badge product-recommendation-badge">
+                Recommended for you: {getProfileSize(profile, product.productType, product.metafields?.find((field) => field?.key === "size_chart")?.value)}
+              </span>
+            )
+          )}
           {onSale && (
             <span className="product-badge">
               SAVE {discountPercent > 0 ? `${discountPercent}%` : "SALE"}

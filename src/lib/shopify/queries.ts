@@ -34,6 +34,7 @@ const PRODUCT_BASE_FIELDS = `
 
 export const PRODUCT_CARD_FIELDS = `
   ${PRODUCT_BASE_FIELDS}
+  metafields(identifiers: [{ namespace: "custom", key: "size_chart" }]) { namespace key value }
   images(first: 2) { nodes { ${IMAGE_FIELDS} } }
   variants(first: 2) { nodes { ${VARIANT_FIELDS} } }
 `;
@@ -50,6 +51,7 @@ export const PRODUCT_FIELDS = `
     { namespace: "custom", key: "materials" }
     { namespace: "custom", key: "care" }
     { namespace: "custom", key: "fit" }
+    { namespace: "custom", key: "size_chart" }
     { namespace: "custom", key: "size_guide" }
     { namespace: "custom", key: "review_entries" }
     { namespace: "reviews", key: "rating" }

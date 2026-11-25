@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   Check,
@@ -24,6 +25,13 @@ import { formatMoney, imageUrl } from "@/lib/format";
 import { useCart } from "./cart-provider";
 import { ProductCard } from "./product-card";
 import { RecentlyViewedProducts } from "./recently-viewed-products";
+import { useSizeProfileStore } from "@/lib/size-profile-store";
+import { getProfileSize } from "@/lib/size-recommendation-utils";
+
+const SizeAdvisorDrawer = dynamic(
+  () => import("./size-advisor/size-advisor-drawer").then((module) => module.SizeAdvisorDrawer),
+  { loading: () => null },
+);
 
 interface ProductReview {
   id: string;
@@ -147,7 +155,17 @@ export function ProductDetails({
   const [storyExpanded, setStoryExpanded] = useState(false);
   const [recommendationType, setRecommendationType] = useState("ALL");
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [sizeAdvisorOpen, setSizeAdvisorOpen] = useState(false);
+  const [sizeAdvisorMounted, setSizeAdvisorMounted] = useState(false);
+  const [sizeAdvisorApplied, setSizeAdvisorApplied] = useState(false);
+  const sizeProfile = useSizeProfileStore((state) => state.profile);
+  const hydrateSizeProfile = useSizeProfileStore((state) => state.hydrate);
+  const closeSizeAdvisor = useCallback(() => setSizeAdvisorOpen(false), []);
   const { addLine, busy } = useCart();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") hydrateSizeProfile();
+  }, [hydrateSizeProfile]);
 
   const selectedVariant = useMemo(
     () =>
@@ -170,6 +188,7 @@ export function ProductDetails({
   const materials = metafield("materials");
   const care = metafield("care");
   const fit = metafield("fit");
+  const sizeChartValue = metafield("size_chart");
   const sizeOption = product.options.find((option) => /size/i.test(option.name));
 
   const reviewEntriesValue = metafield("review_entries");
@@ -223,6 +242,10 @@ export function ProductDetails({
     if (!variant?.availableForSale) return;
     if (await addLine(variant.id, quantity)) {
       setAdded(true);
+      if (sizeAdvisorApplied) {
+        window.dispatchEvent(new CustomEvent("add_to_cart_after_advisor", { detail: { product: product.handle, size: variant.title } }));
+        setSizeAdvisorApplied(false);
+      }
       window.setTimeout(() => setAdded(false), 2000);
     }
   }
@@ -422,9 +445,12 @@ export function ProductDetails({
                       <span className="atelier-option-current">
                         <span>{current || "Select an option"}</span>
                         {isSize && (
-                          <Link href="/pages/size-guide" className="inline-flex items-center gap-1">
-                            <Ruler size={13} /> Size Guide
-                          </Link>
+                          <span className="atelier-size-actions">
+                            {sizeProfile && getProfileSize(sizeProfile, product.productType, sizeChartValue) && <span className="recommended-size-badge">Recommended for you: {getProfileSize(sizeProfile, product.productType, sizeChartValue)}</span>}
+                            <Link href="/pages/size-guide" className="inline-flex items-center gap-1">
+                              <Ruler size={13} /> Size Guide
+                            </Link>
+                          </span>
                         )}
                       </span>
                     </legend>
@@ -452,6 +478,20 @@ export function ProductDetails({
                 );
               })}
             </div>
+
+            {sizeOption && sizeOption.values.length > 1 && (
+              <button
+                type="button"
+                className="find-my-size-button"
+                onClick={() => {
+                  setSizeAdvisorMounted(true);
+                  setSizeAdvisorOpen(true);
+                }}
+              >
+                <Ruler size={16} /> Find my size
+                {sizeProfile && <span>Profile saved</span>}
+              </button>
+            )}
 
             {/* Purchase CTA */}
             <div className="atelier-product-purchase">
@@ -861,6 +901,21 @@ export function ProductDetails({
 
         <RecentlyViewedProducts currentHandle={product.handle} />
       </main>
+      {sizeAdvisorMounted && <SizeAdvisorDrawer
+        open={sizeAdvisorOpen}
+        onClose={closeSizeAdvisor}
+        productTitle={product.title}
+        productType={product.productType}
+        sizeChartValue={sizeChartValue}
+        availableSizes={sizeOption?.values ?? []}
+        onSelectSize={(size) => {
+          const matching = sizeOption?.values.find((value) => value.toLowerCase() === size.toLowerCase());
+          if (matching && sizeOption) {
+            setOption(sizeOption.name, matching);
+            setSizeAdvisorApplied(true);
+          }
+        }}
+      />}
 
       {/* Lightbox Zoom Modal */}
       {zoomed && visibleImage && (
