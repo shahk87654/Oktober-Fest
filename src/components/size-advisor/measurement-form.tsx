@@ -1,14 +1,21 @@
 "use client";
 
-import Image from "next/image";
+import dynamic from "next/dynamic";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Ruler } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { z } from "zod";
+import { calculateBodyShape } from "@/lib/size-engine";
 import { useSizeProfileStore } from "@/lib/size-profile-store";
 import type { Gender, SizeProfile } from "@/lib/size-types";
-import { calculateBodyShape } from "@/lib/size-engine";
 import { BodyShapePicker } from "./body-shape-picker";
 import { MeasurementGuide } from "./measurement-guide";
+
+const FitAvatar3D = dynamic(
+  () => import("./fit-avatar-3d").then((module) => module.FitAvatar3D),
+  { ssr: false, loading: () => <div className="fit-avatar-loading"><span>Preparing your 3D fit model…</span></div> },
+);
 
 const optionalNumber = (min: number, max: number) => z.preprocess(
   (value) => value === "" || value === undefined || (typeof value === "number" && Number.isNaN(value)) ? undefined : value,
@@ -44,275 +51,415 @@ const measureSchema = z.object({
 });
 
 type FormValues = z.infer<typeof measureSchema>;
+type FormInput = z.input<typeof measureSchema>;
+type NumericField = "height" | "bust" | "underbust" | "waist" | "high_hip" | "hip" | "shoulder" |
+  "back_length" | "arm_length" | "upper_arm" | "chest" | "neck" | "sleeve_length" |
+  "inseam" | "outseam" | "thigh" | "rise" | "weight";
+type Step = { title: string; subtitle: string; kind: "measure" | "age" | "shape" | "fit" | "extras" | "privacy"; fields: NumericField[] };
+type MeasurementDefinition = { key: NumericField; title: string; hint: string; min: number; max: number };
 
-const womenFields = [
-  ["bust", "Bust", "Fullest point"],
-  ["underbust", "Underbust", "Just below the bust"],
-  ["waist", "Natural waist", "Narrowest point above navel"],
-  ["high_hip", "High hip", "About 8 cm below waist"],
-  ["hip", "Hip", "Fullest point"],
-  ["shoulder", "Shoulder width", "Seam to seam across back"],
-  ["back_length", "Back length", "Nape to natural waist"],
-  ["arm_length", "Arm length", "Shoulder to wrist"],
-  ["upper_arm", "Upper arm", "Fullest point"],
-] as const;
-const menFields = [
-  ["chest", "Chest", "Fullest point, under arms"],
-  ["neck", "Neck", "Around the base of neck"],
-  ["waist", "Natural waist", "At navel; specify if trousers sit lower"],
-  ["hip", "Hip", "Fullest point"],
-  ["shoulder", "Shoulder width", "Shoulder point to shoulder point"],
-  ["back_length", "Back length", "Nape to natural waist (for jackets)"],
-  ["sleeve_length", "Sleeve length", "Shoulder point to wrist"],
-  ["inseam", "Inseam", "Crotch to ankle"],
-  ["outseam", "Outseam", "Waist to ankle"],
-  ["thigh", "Thigh", "Fullest point"],
-  ["rise", "Rise", "Crotch seam to waist"],
-] as const;
+const definitions: Record<Exclude<NumericField, "weight">, Omit<MeasurementDefinition, "key">> = {
+  height: { title: "Height", hint: "Stand naturally, without shoes.", min: 120, max: 220 },
+  bust: { title: "Bust", hint: "Fullest point, tape level.", min: 55, max: 170 },
+  underbust: { title: "Underbust", hint: "Just below the bust.", min: 50, max: 150 },
+  waist: { title: "Natural waist", hint: "Narrowest point above navel.", min: 45, max: 160 },
+  high_hip: { title: "High hip", hint: "About 8 cm below waist.", min: 55, max: 170 },
+  hip: { title: "Hip", hint: "Fullest point around seat.", min: 60, max: 180 },
+  shoulder: { title: "Shoulder width", hint: "Seam to seam across back.", min: 30, max: 60 },
+  back_length: { title: "Back length", hint: "Nape to natural waist.", min: 30, max: 70 },
+  arm_length: { title: "Arm length", hint: "Shoulder point to wrist.", min: 35, max: 90 },
+  upper_arm: { title: "Upper arm", hint: "Fullest point of upper arm.", min: 15, max: 60 },
+  chest: { title: "Chest", hint: "Fullest point under the arms.", min: 60, max: 170 },
+  neck: { title: "Neck", hint: "Around the base of the neck.", min: 25, max: 60 },
+  sleeve_length: { title: "Sleeve length", hint: "Shoulder point to wrist.", min: 40, max: 100 },
+  inseam: { title: "Inseam", hint: "Crotch to ankle.", min: 45, max: 110 },
+  outseam: { title: "Outseam", hint: "Waist to ankle.", min: 60, max: 140 },
+  thigh: { title: "Thigh", hint: "Fullest point of thigh.", min: 35, max: 100 },
+  rise: { title: "Rise", hint: "Crotch seam to waistband.", min: 15, max: 50 },
+};
+
+function measureStep(fields: NumericField[], subtitle?: string): Step {
+  const first = fields[0] === "weight"
+    ? { title: "Weight", hint: "Used only for a quick estimate." }
+    : definitions[fields[0] as Exclude<NumericField, "weight">];
+  return {
+    title: fields.length > 1 ? `${first.title} & ${definitions[fields[1] as Exclude<NumericField, "weight">].title.toLowerCase()}` : first.title,
+    subtitle: subtitle ?? first.hint,
+    kind: "measure",
+    fields,
+  };
+}
+
+function exactSteps(gender: Gender, productType: string): Step[] {
+  const type = productType.toLowerCase();
+  const steps: Step[] = [measureStep(["height"])];
+  if (gender === "women") {
+    steps.push(
+      measureStep(["bust", "underbust"], "These two measurements shape a supportive dirndl bodice."),
+      measureStep(["waist", "high_hip"], "Measure the narrowest point, then about 8 cm below."),
+      measureStep(["hip"], "Keep the tape level around the fullest point."),
+      measureStep(["shoulder", "back_length"], "A friend can help with both back measurements."),
+      { title: "Your silhouette", subtitle: "We’ll estimate a shape from your measurements. Choose what feels right.", kind: "shape", fields: [] },
+      { title: "A few finishing touches", subtitle: "Optional details help refine the fit.", kind: "extras", fields: ["arm_length", "upper_arm"] },
+    );
+    steps.push(
+      { title: "Your preferred fit", subtitle: "We’ll use this to fine-tune the size suggestion.", kind: "fit", fields: [] },
+      { title: "Keep it private", subtitle: "Your measurements are used only to recommend a size.", kind: "privacy", fields: [] },
+    );
+    return steps;
+  }
+  if (/shirt/.test(type)) {
+    steps.push(
+      measureStep(["chest", "neck"], "Measure around the fullest chest and base of the neck."),
+      measureStep(["sleeve_length"], "From the shoulder point to your wrist."),
+      { title: "A little more detail", subtitle: "Optional: refine the fit with your waist and hip.", kind: "extras", fields: ["waist", "hip", "shoulder", "back_length", "weight"] },
+    );
+  } else if (/janker|jacket/.test(type)) {
+    steps.push(
+      measureStep(["chest", "shoulder"], "Chest and shoulder width define the jacket’s structure."),
+      measureStep(["sleeve_length", "back_length"], "A friend can help with the back length."),
+      { title: "A little more detail", subtitle: "Optional: add your natural waist and hip.", kind: "extras", fields: ["waist", "hip", "inseam", "outseam", "weight"] },
+    );
+  } else if (/lederhosen|trouser|pants/.test(type)) {
+    steps.push(
+      measureStep(["waist", "hip"], "Measure where you wear the waistband: at navel or hip."),
+      measureStep(["inseam", "outseam"], "Inside leg: crotch to ankle. Outside: waistband to ankle."),
+      { title: "Dial in the details", subtitle: "Optional: thigh and rise help us refine a traditional trouser fit.", kind: "extras", fields: ["thigh", "rise", "weight"] },
+    );
+  } else {
+    steps.push(
+      measureStep(["chest", "neck"], "Measure around the fullest chest and base of the neck."),
+      measureStep(["waist", "hip"], "Natural waist is at navel height; hip is the fullest point."),
+      measureStep(["shoulder", "sleeve_length"], "A friend can help measure across your back."),
+      measureStep(["inseam", "outseam"], "Inside and outside leg measurements."),
+      { title: "A little more detail", subtitle: "Optional measurements for a more complete profile.", kind: "extras", fields: ["back_length", "thigh", "rise", "weight"] },
+    );
+  }
+  return steps;
+}
+
+function quickSteps(): Step[] {
+  return [
+    measureStep(["height"]),
+    { title: "Your weight", subtitle: "Only used for an approximate fit estimate.", kind: "measure", fields: ["weight"] },
+    { title: "Your age range", subtitle: "A broad range is enough; we don’t need your exact age.", kind: "age", fields: [] },
+    { title: "Your silhouette", subtitle: "Choose the shape that feels most like you.", kind: "shape", fields: [] },
+    { title: "Your preferred fit", subtitle: "We’ll use this to fine-tune the size suggestion.", kind: "fit", fields: [] },
+    { title: "Keep it private", subtitle: "Your measurements are used only to recommend a size.", kind: "privacy", fields: [] },
+  ];
+}
 
 export function MeasurementForm({
   gender,
   mode,
   productType,
   onComplete,
+  onExit,
 }: {
   gender: Gender;
   mode: "quick" | "exact";
   productType: string;
   onComplete: (profile: SizeProfile) => void;
+  onExit?: () => void;
 }) {
+  const [stepIndex, setStepIndex] = useState(0);
   const unit = useSizeProfileStore((state) => state.unit);
   const savedProfile = useSizeProfileStore((state) => state.profile);
   const setUnit = useSizeProfileStore((state) => state.setUnit);
-  const fields = gender === "women" ? womenFields : (() => {
-    const type = productType.toLowerCase();
-    if (/shirt/.test(type)) return menFields.filter(([key]) => ["chest", "neck", "shoulder", "sleeve_length"].includes(key));
-    if (/janker|jacket/.test(type)) return menFields.filter(([key]) => ["chest", "shoulder", "sleeve_length", "back_length"].includes(key));
-    if (/lederhosen|trouser|pants/.test(type)) return menFields.filter(([key]) => ["waist", "hip", "inseam", "outseam", "thigh", "rise"].includes(key));
-    return menFields;
-  })();
-  const profileValue = (key: string) => {
-    const value = savedProfile?.gender === gender ? savedProfile.measurements[key] : undefined;
-    return value === undefined ? undefined : unit === "imperial" ? value / 2.54 : value;
-  };
   const activeProfile = savedProfile?.gender === gender ? savedProfile : null;
-  const { register, handleSubmit, control, getValues, setValue, formState: { errors } } = useForm<
-    z.input<typeof measureSchema>,
-    unknown,
-    FormValues
-  >({
+  const steps = useMemo(() => mode === "quick" ? quickSteps() : exactSteps(gender, productType), [mode, gender, productType]);
+  const currentStep = steps[stepIndex];
+  const { register, handleSubmit, control, getValues, setValue, trigger, setError, formState: { errors } } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(measureSchema),
     defaultValues: {
       gender,
       height: activeProfile?.height ? (unit === "imperial" ? activeProfile.height / 2.54 : activeProfile.height) : undefined,
       weight: activeProfile?.weight ? (unit === "imperial" ? activeProfile.weight / 0.453592 : activeProfile.weight) : undefined,
-      bust: profileValue("bust"),
-      underbust: profileValue("underbust"),
-      waist: profileValue("waist"),
-      high_hip: profileValue("high_hip"),
-      hip: profileValue("hip"),
-      shoulder: profileValue("shoulder"),
-      back_length: profileValue("back_length"),
-      arm_length: profileValue("arm_length"),
-      upper_arm: profileValue("upper_arm"),
-      chest: profileValue("chest"),
-      neck: profileValue("neck"),
-      sleeve_length: profileValue("sleeve_length"),
-      inseam: profileValue("inseam"),
-      outseam: profileValue("outseam"),
-      thigh: profileValue("thigh"),
-      rise: profileValue("rise"),
+      ...Object.fromEntries(
+        Object.keys(definitions)
+          .filter((key) => key !== "height")
+          .map((key) => {
+            const value = activeProfile?.measurements[key];
+            return [key, value === undefined ? undefined : unit === "imperial" ? value / 2.54 : value];
+          }),
+      ),
       body_shape: activeProfile?.body_shape ?? undefined,
       fit_preference: activeProfile?.fit_preference ?? "regular",
       age_range: activeProfile?.age_range ?? "",
+      skirt_length: activeProfile?.skirt_length ?? "midi",
+      bra_size: activeProfile?.bra_size ?? "",
       consent: activeProfile?.consent ?? false,
     },
+    shouldUnregister: false,
   });
-  const bustValue = useWatch({ control, name: "bust" });
-  const waistValue = useWatch({ control, name: "waist" });
-  const highHipValue = useWatch({ control, name: "high_hip" });
-  const hipValue = useWatch({ control, name: "hip" });
-  const selectedShape = useWatch({ control, name: "body_shape" }) ?? "";
-  const selectedFit = useWatch({ control, name: "fit_preference" }) ?? "regular";
-  const selectedSkirtLength = useWatch({ control, name: "skirt_length" }) ?? "midi";
-  const computedShape = mode === "exact" && gender === "women"
+  const values = useWatch({ control });
+  const selectedShape = values.body_shape ?? "";
+  const computedShape = gender === "women"
     ? calculateBodyShape({
-        bust: Number(bustValue),
-        waist: Number(waistValue),
-        high_hip: Number(highHipValue),
-        hip: Number(hipValue),
+        bust: Number(values.bust) * (unit === "imperial" ? 2.54 : 1),
+        waist: Number(values.waist) * (unit === "imperial" ? 2.54 : 1),
+        high_hip: Number(values.high_hip) * (unit === "imperial" ? 2.54 : 1),
+        hip: Number(values.hip) * (unit === "imperial" ? 2.54 : 1),
       })
     : null;
+  const focusMeasurement = currentStep.fields[0] === "weight" ? undefined : currentStep.fields[0];
+  const percent = Math.round(((stepIndex + 1) / steps.length) * 100);
+  const modelMeasurements = Object.fromEntries(
+    Object.entries(values)
+      .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[0] !== "weight")
+      .map(([key, value]) => [key, unit === "imperial" ? value * 2.54 : value]),
+  );
+
   const changeUnit = (nextUnit: "metric" | "imperial") => {
     if (unit === nextUnit) return;
     const factor = unit === "metric" ? 1 / 2.54 : 2.54;
     const weightFactor = unit === "metric" ? 1 / 0.453592 : 0.453592;
-    const numericFields = [
-      "height", "bust", "underbust", "waist", "high_hip", "hip", "shoulder",
-      "back_length", "arm_length", "upper_arm", "chest", "neck",
-      "sleeve_length", "inseam", "outseam", "thigh", "rise",
-    ] as const;
+    const numericFields: NumericField[] = ["height", "weight", ...Object.keys(definitions).filter((key) => key !== "height") as NumericField[]];
     for (const field of numericFields) {
       const value = getValues(field);
       if (typeof value === "number" && Number.isFinite(value)) {
-        setValue(field, value * factor, { shouldDirty: true, shouldValidate: true });
+        setValue(field, value * (field === "weight" ? weightFactor : factor), { shouldDirty: true, shouldValidate: true });
       }
-    }
-    const weight = getValues("weight");
-    if (typeof weight === "number" && Number.isFinite(weight)) {
-      setValue("weight", weight * weightFactor, { shouldDirty: true, shouldValidate: true });
     }
     setUnit(nextUnit);
   };
-  const setNumericRegister = (name: typeof womenFields[number][0] | typeof menFields[number][0]) =>
-    register(name, { valueAsNumber: true });
 
-  const submit = (values: FormValues) => {
+  const advance = async () => {
+    if (currentStep.fields.length) {
+      const missing = currentStep.fields.find((field) => {
+        if (currentStep.kind === "extras") return false;
+        const value = getValues(field);
+        return typeof value !== "number" || !Number.isFinite(value);
+      });
+      if (missing) {
+        setError(missing, { type: "required", message: "Add this measurement to continue." });
+        return;
+      }
+      const valid = await trigger(currentStep.fields as FieldPath<FormInput>[]);
+      if (!valid) return;
+    }
+    if (currentStep.kind === "age" && !getValues("age_range")) {
+      setError("age_range", { type: "required", message: "Choose an age range to continue." });
+      return;
+    }
+    if (currentStep.kind === "shape" && !getValues("body_shape")) {
+      setError("body_shape", { type: "required", message: "Choose a silhouette to continue." });
+      return;
+    }
+    if (stepIndex < steps.length - 1) setStepIndex((current) => current + 1);
+  };
+
+  const submit = (submitted: FormValues) => {
     const measurements: Record<string, number> = {};
-    for (const [key, value] of Object.entries(values)) {
+    for (const [key, value] of Object.entries(submitted)) {
       if (typeof value === "number" && key !== "weight") {
         measurements[key] = unit === "imperial" ? value * 2.54 : value;
       }
     }
-    const profile: SizeProfile = {
+    onComplete({
       gender,
       unit,
       mode,
-      consent: values.consent,
-      height: values.height ? (unit === "imperial" ? values.height * 2.54 : values.height) : undefined,
-      weight: values.weight ? (unit === "imperial" ? values.weight * 0.453592 : values.weight) : undefined,
-      age_range: values.age_range,
-      body_shape: values.body_shape as SizeProfile["body_shape"],
-      fit_preference: values.fit_preference,
-      bra_size: values.bra_size || undefined,
-      skirt_length: values.skirt_length,
+      consent: submitted.consent,
+      height: submitted.height ? (unit === "imperial" ? submitted.height * 2.54 : submitted.height) : undefined,
+      weight: submitted.weight ? (unit === "imperial" ? submitted.weight * 0.453592 : submitted.weight) : undefined,
+      age_range: submitted.age_range,
+      body_shape: (submitted.body_shape || computedShape || undefined) as SizeProfile["body_shape"],
+      fit_preference: submitted.fit_preference,
+      bra_size: submitted.bra_size || undefined,
+      skirt_length: submitted.skirt_length,
       measurements,
-    };
-    onComplete(profile);
+    });
   };
 
+  const numericInput = (field: NumericField) => register(field, { valueAsNumber: true });
+  const displayUnit = unit === "metric" ? "cm" : "in";
+
   return (
-    <form className="size-advisor-form" onSubmit={handleSubmit(submit)}>
-      <fieldset className="size-unit-toggle" aria-label="Measurement units">
-        <legend>UNITS</legend>
-        <button type="button" className={unit === "metric" ? "is-active" : ""} aria-pressed={unit === "metric"} onClick={() => changeUnit("metric")}>cm <span>/</span> kg</button>
-        <button type="button" className={unit === "imperial" ? "is-active" : ""} aria-pressed={unit === "imperial"} onClick={() => changeUnit("imperial")}>in <span>/</span> lb</button>
-      </fieldset>
-      <div className="advisor-field">
-        <label htmlFor={`${mode}-height`}>Height ({unit === "metric" ? "cm" : "in"})</label>
-        <input id={`${mode}-height`} type="number" step="any" {...register("height", { valueAsNumber: true })} required />
-        {errors.height && <span className="advisor-error">Enter a height between 120 and 220 cm.</span>}
-      </div>
-      {mode === "quick" ? (
-        <>
-          <div className="advisor-field">
-            <label htmlFor="quick-weight">Weight ({unit === "metric" ? "kg" : "lb"})</label>
-            <input id="quick-weight" type="number" step="any" {...register("weight", { valueAsNumber: true })} required />
-            {errors.weight && <span className="advisor-error">Enter a realistic weight in the selected unit.</span>}
-          </div>
-          <div className="advisor-field">
-            <label htmlFor="age-range">Age range</label>
-            <select id="age-range" {...register("age_range")} defaultValue="" required>
-              <option value="" disabled>Select range</option>
-              <option>18–29</option><option>30–44</option><option>45–59</option><option>60+</option>
-            </select>
-          </div>
-          <label className="advisor-label">Body shape <span>Choose what feels closest</span></label>
-          <BodyShapePicker gender={gender} value={selectedShape} onChange={(value) => setValue("body_shape", value)} />
-        </>
-      ) : (
-        <>
-          {gender === "men" && /lederhosen|trouser|pants/i.test(productType) && <p className="advisor-hint">Which waist do you wear? Measure at navel height or at the hip where the waistband sits.</p>}
-          <div className="measurement-overview" aria-label="Measurement positions">
-            <div className="measurement-photo-reference">
-              <Image
-                src={gender === "women"
-                  ? "https://oktoberfestoutfits.com/cdn/shop/files/comfort-stylish-dirndl-hero-banner.webp?v=1783725787&width=1100"
-                  : "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=900&q=85"}
-                alt={gender === "women" ? "Real dirndl fit reference" : "Real men's heritage clothing fit reference"}
-                fill
-                sizes="112px"
-                unoptimized={gender === "women"}
-              />
-              <span>Real fit reference</span>
-            </div>
-            <Image src={`/size-guide/${gender}-front.svg`} alt={`${gender} technical front measurement positions`} width={112} height={150} />
-            <Image src={`/size-guide/${gender}-side.svg`} alt={`${gender} technical side measurement positions`} width={112} height={150} />
-          </div>
-          <div className="measurement-fields">
-            {fields.map(([name, label, hint]) => {
-              const optional = gender === "women"
-                  ? name === "arm_length" || name === "upper_arm"
-                  : name === "back_length" || name === "thigh" || name === "rise";
+    <form className="fit-wizard" onSubmit={handleSubmit(submit)}>
+      <aside className="fit-wizard-visual">
+        <FitAvatar3D
+          gender={gender}
+          activeMeasurement={focusMeasurement}
+          measurements={modelMeasurements}
+          bodyShape={String(values.body_shape ?? computedShape ?? "")}
+          fitPreference={values.fit_preference ?? "regular"}
+          unit={unit}
+        />
+        <div className="fit-wizard-progress">
+          <div className="fit-wizard-progress-copy"><span>YOUR FIT PROFILE</span><strong>{String(stepIndex + 1).padStart(2, "0")} <i>/</i> {String(steps.length).padStart(2, "0")}</strong></div>
+          <div className="fit-wizard-progress-track"><i style={{ width: `${percent}%` }} /></div>
+          <p>Every answer refines your fit model.</p>
+        </div>
+      </aside>
+
+      <section className="fit-wizard-question" key={`${mode}-${stepIndex}`}>
+        <div className="fit-wizard-topbar">
+          <button type="button" className="fit-wizard-back" onClick={() => stepIndex ? setStepIndex((current) => current - 1) : onExit?.()} disabled={!stepIndex && !onExit} aria-label={stepIndex ? "Previous question" : "Change fit method"}>
+            <ChevronLeft size={17} /> {stepIndex ? "BACK" : "METHOD"}
+          </button>
+          <fieldset className="size-unit-toggle" aria-label="Measurement units">
+            <legend>UNITS</legend>
+            <button type="button" className={unit === "metric" ? "is-active" : ""} aria-pressed={unit === "metric"} onClick={() => changeUnit("metric")}>CM <span>/</span> KG</button>
+            <button type="button" className={unit === "imperial" ? "is-active" : ""} aria-pressed={unit === "imperial"} onClick={() => changeUnit("imperial")}>IN <span>/</span> LB</button>
+          </fieldset>
+        </div>
+        <span className="fit-wizard-kicker">{currentStep.kind === "measure" ? "MEASUREMENT" : "YOUR PREFERENCE"}</span>
+        <h3>{currentStep.title}</h3>
+        <p className="fit-wizard-subtitle">{currentStep.subtitle}</p>
+
+        {currentStep.kind === "measure" && (
+          <div className={`fit-wizard-measures ${currentStep.fields.length > 1 ? "has-pair" : ""}`}>
+            {currentStep.fields.map((field) => {
+              const isWeight = field === "weight";
+              const definition = isWeight
+                ? { title: "Weight", hint: "Used only for a quick estimate.", min: 30, max: 250 }
+                : definitions[field as Exclude<NumericField, "weight">];
+              const unitFactor = unit === "metric" ? 1 : field === "weight" ? 2.20462 : 1 / 2.54;
+              const min = Math.round(definition.min * unitFactor);
+              const max = Math.round(definition.max * unitFactor);
+              const numberValue = values[field];
+              const defaultValue = Math.round((min + max) / 2);
+              const activeValue = typeof numberValue === "number" && Number.isFinite(numberValue) ? numberValue : defaultValue;
               return (
-                  <div className="advisor-field measurement-field" key={name}>
-                    <MeasurementGuide measurement={name} gender={gender} />
-                    <div>
-                      <label htmlFor={`exact-${name}`}>{label} ({unit === "metric" ? "cm" : "in"})</label>
-                      <input id={`exact-${name}`} type="number" step="any" {...setNumericRegister(name)} required={!optional} />
-                      <small>{hint}</small>
-                      {errors[name] && <span className="advisor-error">Check this measurement and re-measure.</span>}
-                    </div>
+                <article className="fit-wizard-measure" key={field}>
+                  {!isWeight && field !== "height" && <MeasurementGuide measurement={field} gender={gender} />}
+                  <label htmlFor={`measure-${field}`}>
+                    <span>{definition.title}</span>
+                    <small>{isWeight ? unit === "metric" ? "kg" : "lb" : displayUnit}</small>
+                  </label>
+                  <div className="fit-wizard-number-wrap">
+                    <input
+                      id={`measure-${field}`}
+                      type="number"
+                      step="any"
+                      min={min}
+                      max={max}
+                      inputMode="decimal"
+                      placeholder={String(defaultValue)}
+                      {...numericInput(field)}
+                      required={currentStep.kind !== "extras"}
+                    />
+                    <span>{isWeight ? unit === "metric" ? "kg" : "lb" : displayUnit}</span>
                   </div>
+                  <input
+                    className="fit-wizard-slider"
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={unit === "metric" ? "1" : "0.5"}
+                    value={activeValue}
+                    aria-label={`Adjust ${definition.title.toLowerCase()}`}
+                    onChange={(event) => setValue(field, Number(event.target.value), { shouldDirty: true, shouldValidate: true })}
+                  />
+                  <div className="fit-wizard-slider-labels"><span>{min} {isWeight ? unit === "metric" ? "kg" : "lb" : displayUnit}</span><span>{max} {isWeight ? unit === "metric" ? "kg" : "lb" : displayUnit}</span></div>
+                  <p>{definition.hint}</p>
+                  {errors[field] && <span className="advisor-error">Check the value and re-measure.</span>}
+                </article>
               );
             })}
           </div>
-          {gender === "women" && (
+        )}
+
+        {currentStep.kind === "age" && (
+          <div className="fit-wizard-choice-grid" role="group" aria-label="Age range">
+            {["18–29", "30–44", "45–59", "60+"].map((age) => (
+              <button type="button" key={age} className={values.age_range === age ? "is-selected" : ""} aria-pressed={values.age_range === age} onClick={() => setValue("age_range", age, { shouldDirty: true })}>
+                <span>{age}</span>{values.age_range === age && <Check size={15} />}
+              </button>
+            ))}
+            {errors.age_range && <span className="advisor-error">{errors.age_range.message}</span>}
+          </div>
+        )}
+
+        {currentStep.kind === "shape" && (
+          <div className="fit-wizard-shape">
+            {computedShape && mode === "exact" && <p className="fit-wizard-insight"><Ruler size={14} /> Based on your measurements, our model reads <strong>{computedShape.replace("-", " ")}</strong>. Confirm or change it.</p>}
+            <BodyShapePicker gender={gender} value={selectedShape || (mode === "exact" ? computedShape ?? "" : "")} onChange={(value) => setValue("body_shape", value, { shouldDirty: true })} />
+            {errors.body_shape && <span className="advisor-error">{errors.body_shape.message}</span>}
+          </div>
+        )}
+
+        {currentStep.kind === "fit" && (
+          <div className="advisor-fit-options fit-wizard-fit" role="group" aria-label="Fit preference">
+            {([
+              ["fitted", "Close", "A defined silhouette"],
+              ["regular", "Classic", "Easy, balanced comfort"],
+              ["relaxed", "Relaxed", "A little extra room"],
+            ] as const).map(([value, title, description]) => (
+              <button type="button" key={value} aria-pressed={values.fit_preference === value} className={values.fit_preference === value ? "is-selected" : ""} onClick={() => setValue("fit_preference", value, { shouldDirty: true })}>
+                <span className={`fit-preference-shape fit-${value}`} />
+                <strong>{title}</strong><small>{description}</small>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {currentStep.kind === "privacy" && (
+          <div className="fit-wizard-privacy-card">
+            <span className="fit-privacy-icon"><Check size={18} /></span>
+            <strong>Your measurements stay yours.</strong>
+            <p>We don’t upload measurements or collect photos. Your answers are used to calculate this recommendation in your browser.</p>
+            <label className="advisor-consent">
+              <input type="checkbox" {...register("consent")} />
+              Save my measurements on this device for next time (optional).
+            </label>
+          </div>
+        )}
+
+        {currentStep.kind === "extras" && (
+          <div className="fit-wizard-extras">
+            {currentStep.fields.map((field) => {
+              if (field === "weight") {
+                return (
+                  <div className="fit-wizard-number-wrap" key={field}>
+                    <label htmlFor="measure-weight">Weight <small>{unit === "metric" ? "kg" : "lb"} · optional</small></label>
+                    <input id="measure-weight" type="number" step="any" min={unit === "metric" ? 30 : 66} max={unit === "metric" ? 250 : 550} {...numericInput("weight")} />
+                  </div>
+                );
+              }
+              const definition = definitions[field as Exclude<NumericField, "weight">];
+              const min = Math.round(definition.min * (unit === "metric" ? 1 : 1 / 2.54));
+              const max = Math.round(definition.max * (unit === "metric" ? 1 : 1 / 2.54));
+              return (
+                <div className="fit-wizard-number-wrap" key={field}>
+                  <label htmlFor={`extra-${field}`}>{definition.title} <small>{displayUnit} · optional</small></label>
+                  <input id={`extra-${field}`} type="number" step="any" min={min} max={max} {...numericInput(field)} />
+                </div>
+              );
+            })}
+            {gender === "women" && (
+              <>
+                <div className="fit-wizard-number-wrap">
+                  <label htmlFor="bra-size">Bra size <small>optional</small></label>
+                  <input id="bra-size" placeholder="e.g. 75C" {...register("bra_size")} />
+                </div>
+                <div>
+                  <span className="advisor-label">Preferred skirt length</span>
+                  <div className="advisor-choice-row" role="group" aria-label="Preferred skirt length">
+                    {(["knee", "midi", "long"] as const).map((length) => (
+                      <button type="button" key={length} className={values.skirt_length === length ? "is-selected" : ""} aria-pressed={values.skirt_length === length} onClick={() => setValue("skirt_length", length, { shouldDirty: true })}>{length}</button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="fit-wizard-footer">
+          {stepIndex < steps.length - 1 ? (
+            <button type="button" className="advisor-primary-button" onClick={() => void advance()}>
+              NEXT QUESTION <ChevronRight size={17} />
+            </button>
+          ) : (
             <>
-              {computedShape && (
-                <div className="computed-shape">
-                  <p>From your measurements, your shape looks like <strong>{computedShape.replace("-", " ")}</strong>. Confirm or choose another:</p>
-                  <BodyShapePicker gender={gender} value={selectedShape || computedShape} onChange={(value) => setValue("body_shape", value)} />
-                </div>
-              )}
-              <div className="advisor-field">
-                <label htmlFor="bra-size">Bra size (optional)</label>
-                <input id="bra-size" placeholder="e.g. 75C" {...register("bra_size")} />
-                <span className="advisor-label">Preferred skirt length</span>
-                <div className="advisor-choice-row" role="group" aria-label="Preferred skirt length">
-                {(["knee", "midi", "long"] as const).map((length) => (
-                  <button
-                    type="button"
-                    aria-pressed={selectedSkirtLength === length}
-                    className={selectedSkirtLength === length ? "is-selected" : ""}
-                    key={length}
-                    onClick={() => setValue("skirt_length", length, { shouldDirty: true })}
-                  >{length}</button>
-                ))}
-                </div>
-              </div>
+              <button type="submit" className="advisor-primary-button">REVEAL MY SIZE <ArrowRight size={16} /></button>
             </>
           )}
-        </>
-      )}
-      <div className="advisor-field">
-        <span className="advisor-label">How do you like it to fit?</span>
-        <div className="advisor-fit-options" role="group" aria-label="Fit preference">
-          {([
-            ["fitted", "Close", "A defined silhouette"],
-            ["regular", "Classic", "Easy, balanced comfort"],
-            ["relaxed", "Relaxed", "A little extra room"],
-          ] as const).map(([value, title, description]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={selectedFit === value}
-              className={selectedFit === value ? "is-selected" : ""}
-              onClick={() => setValue("fit_preference", value, { shouldDirty: true })}
-            >
-              <span className="advisor-fit-mark" />
-              <strong>{title}</strong>
-              <small>{description}</small>
-            </button>
-          ))}
         </div>
-      </div>
-      <label className="advisor-consent">
-        <input type="checkbox" {...register("consent")} />
-        Save my measurements on this device for next time (optional).
-      </label>
-      <p className="advisor-privacy">Your measurements stay in this browser. No photos or sensitive personal data are collected. Delete your profile anytime.</p>
-      <button className="advisor-primary-button" type="submit">See my size recommendation</button>
+        <span className="fit-wizard-step-note">STEP {String(stepIndex + 1).padStart(2, "0")} <i>/</i> {String(steps.length).padStart(2, "0")}</span>
+      </section>
     </form>
   );
 }

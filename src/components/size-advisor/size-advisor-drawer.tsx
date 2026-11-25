@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Ruler, ScanLine, Sparkles, UserRound, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { recommendSize, calculateBodyShape, validateMeasurements } from "@/lib/size-engine";
 import { getSizeChart, inferSizingGender } from "@/lib/size-recommendation-utils";
@@ -9,6 +10,11 @@ import { useSizeProfileStore } from "@/lib/size-profile-store";
 import type { Gender, SizeProfile, SizeRecommendation } from "@/lib/size-types";
 import { MeasurementForm } from "./measurement-form";
 import { SizeResultCard } from "./size-result-card";
+
+const FitAvatar3D = dynamic(
+  () => import("./fit-avatar-3d").then((module) => module.FitAvatar3D),
+  { ssr: false, loading: () => <div className="fit-avatar-loading"><span>Preparing your 3D fit model…</span></div> },
+);
 
 function quickEstimate(profile: SizeProfile): SizeProfile {
   if (profile.mode !== "quick" || !profile.height || !profile.weight) return profile;
@@ -240,6 +246,9 @@ export function SizeAdvisorDrawer({
                 </section>
               ) : !mode && !profile ? (
                 <>
+                  <div className="advisor-onboarding-model">
+                    <FitAvatar3D gender={gender} activeMeasurement="waist" fitPreference="regular" />
+                  </div>
                   <div className="advisor-progress" aria-label="Step 1 of 2">
                     <span className="is-current">01</span><i /><span>02</span>
                     <small>YOUR FIT PROFILE</small>
@@ -309,7 +318,13 @@ export function SizeAdvisorDrawer({
                     </div>
                   )}
                   {error && <p className="advisor-error" role="alert">{error}</p>}
-                  <MeasurementForm gender={gender} mode={mode} productType={productType} onComplete={onComplete} />
+                  <MeasurementForm
+                    gender={gender}
+                    mode={mode}
+                    productType={productType}
+                    onExit={() => setMode(null)}
+                    onComplete={onComplete}
+                  />
                 </>
               ) : null}
             </div>

@@ -190,6 +190,9 @@ export function ProductDetails({
   const fit = metafield("fit");
   const sizeChartValue = metafield("size_chart");
   const sizeOption = product.options.find((option) => /size/i.test(option.name));
+  const profileRecommendedSize = sizeProfile
+    ? getProfileSize(sizeProfile, product.productType, sizeChartValue)
+    : null;
 
   const reviewEntriesValue = metafield("review_entries");
   const reviewEntries = useMemo(() => parseReviewEntries(reviewEntriesValue), [reviewEntriesValue]);
@@ -443,10 +446,15 @@ export function ProductDetails({
                     <legend>
                       <span>{option.name}</span>
                       <span className="atelier-option-current">
-                        <span>{current || "Select an option"}</span>
+                        <span className="atelier-option-selected">{current || "Select an option"}</span>
                         {isSize && (
                           <span className="atelier-size-actions">
-                            {sizeProfile && getProfileSize(sizeProfile, product.productType, sizeChartValue) && <span className="recommended-size-badge">Recommended for you: {getProfileSize(sizeProfile, product.productType, sizeChartValue)}</span>}
+                            {profileRecommendedSize && (
+                              <span className="recommended-size-badge product-size-recommendation">
+                                <span>Recommended for you</span>
+                                <strong>{profileRecommendedSize}</strong>
+                              </span>
+                            )}
                             <Link href="/pages/size-guide" className="inline-flex items-center gap-1">
                               <Ruler size={13} /> Size Guide
                             </Link>
