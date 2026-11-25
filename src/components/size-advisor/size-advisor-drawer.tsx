@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Ruler, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Ruler, ScanLine, Sparkles, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { recommendSize, calculateBodyShape, validateMeasurements } from "@/lib/size-engine";
 import { getSizeChart, inferSizingGender } from "@/lib/size-recommendation-utils";
@@ -58,6 +58,7 @@ export function SizeAdvisorDrawer({
   const { profile, hydrate, saveProfile, deleteProfile } = useSizeProfileStore();
   const [gender, setGender] = useState<Gender>(inferSizingGender(productType, productTitle));
   const [mode, setMode] = useState<"quick" | "exact" | "scan" | null>(null);
+  const [selectedMode, setSelectedMode] = useState<"quick" | "exact">("exact");
   const [result, setResult] = useState<SizeRecommendation | null>(null);
   const [error, setError] = useState("");
   const chart = useMemo(() => getSizeChart(sizeChartValue, gender, productType), [sizeChartValue, gender, productType]);
@@ -239,20 +240,59 @@ export function SizeAdvisorDrawer({
                 </section>
               ) : !mode && !profile ? (
                 <>
-                  <p className="size-advisor-intro">A few details are all we need to recommend a comfortable fit.</p>
+                  <div className="advisor-progress" aria-label="Step 1 of 2">
+                    <span className="is-current">01</span><i /><span>02</span>
+                    <small>YOUR FIT PROFILE</small>
+                  </div>
+                  <p className="size-advisor-intro">A few details are all we need to recommend a more considered fit.</p>
                   <fieldset className="advisor-gender">
-                    <legend>Shopping for</legend>
-                    <button type="button" className={gender === "women" ? "is-selected" : ""} onClick={() => setGender("women")}>Women</button>
-                    <button type="button" className={gender === "men" ? "is-selected" : ""} onClick={() => setGender("men")}>Men</button>
+                    <legend>WHO ARE YOU DRESSING?</legend>
+                    {(["women", "men"] as const).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={gender === option ? "is-selected" : ""}
+                        aria-pressed={gender === option}
+                        onClick={() => setGender(option)}
+                      >
+                        <UserRound size={17} strokeWidth={1.6} />
+                        <span>{option === "women" ? "Women" : "Men"}</span>
+                        {gender === option && <Check className="advisor-selected-check" size={15} />}
+                      </button>
+                    ))}
                   </fieldset>
-                  <button type="button" className="advisor-mode-card" onClick={() => { setMode("quick"); }}>
-                    <strong>Quick estimate</strong><span>Height, weight and fit preference · estimated</span>
-                  </button>
-                  <button type="button" className="advisor-mode-card" onClick={() => { setMode("exact"); }}>
-                    <strong>Exact measurements</strong><span>Guided measurements for a more precise fit</span>
-                  </button>
-                  <button type="button" className="advisor-mode-card is-disabled" onClick={() => setError("Body scan is not available yet. Choose quick estimate or exact measurements.")}>
-                    <strong>Phone scan <span>Coming later</span></strong><span>Vendor-ready integration point · not connected</span>
+                  <fieldset className="advisor-mode-options">
+                    <legend>CHOOSE YOUR FIT METHOD</legend>
+                    <button
+                      type="button"
+                      aria-pressed={selectedMode === "quick"}
+                      className={`advisor-mode-card ${selectedMode === "quick" ? "is-selected" : ""}`}
+                      onClick={() => setSelectedMode("quick")}
+                    >
+                      <span className="advisor-mode-icon"><Sparkles size={18} /></span>
+                      <span className="advisor-mode-copy"><strong>Quick estimate</strong><small>Height, weight &amp; a few quick details</small></span>
+                      <span className="advisor-mode-tag">ESTIMATED</span>
+                      <span className="advisor-radio-mark" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={selectedMode === "exact"}
+                      className={`advisor-mode-card ${selectedMode === "exact" ? "is-selected" : ""}`}
+                      onClick={() => setSelectedMode("exact")}
+                    >
+                      <span className="advisor-mode-icon"><Ruler size={18} /></span>
+                      <span className="advisor-mode-copy"><strong>Exact measurements</strong><small>Guided step-by-step for your closest fit</small></span>
+                      <span className="advisor-mode-tag is-precise">MORE PRECISE</span>
+                      <span className="advisor-radio-mark" />
+                    </button>
+                    <div className="advisor-mode-card is-disabled" aria-disabled="true">
+                      <span className="advisor-mode-icon"><ScanLine size={18} /></span>
+                      <span className="advisor-mode-copy"><strong>Phone scan</strong><small>Fast body scan, coming soon</small></span>
+                      <span className="advisor-mode-tag">SOON</span>
+                    </div>
+                  </fieldset>
+                  <button type="button" className="advisor-primary-button advisor-continue-button" onClick={() => setMode(selectedMode)}>
+                    Continue <ArrowRight size={16} />
                   </button>
                   <p className="advisor-privacy">Private by design: no photos, only sizing measurements. Saving is optional.</p>
                 </>

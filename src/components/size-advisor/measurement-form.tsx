@@ -11,7 +11,7 @@ import { BodyShapePicker } from "./body-shape-picker";
 import { MeasurementGuide } from "./measurement-guide";
 
 const optionalNumber = (min: number, max: number) => z.preprocess(
-  (value) => value === "" || value === undefined ? undefined : value,
+  (value) => value === "" || value === undefined || (typeof value === "number" && Number.isNaN(value)) ? undefined : value,
   z.coerce.number().min(min).max(max).optional(),
 );
 
@@ -96,7 +96,7 @@ export function MeasurementForm({
     return value === undefined ? undefined : unit === "imperial" ? value / 2.54 : value;
   };
   const activeProfile = savedProfile?.gender === gender ? savedProfile : null;
-  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<
+  const { register, handleSubmit, control, getValues, setValue, formState: { errors } } = useForm<
     z.input<typeof measureSchema>,
     unknown,
     FormValues
@@ -133,6 +133,8 @@ export function MeasurementForm({
   const highHipValue = useWatch({ control, name: "high_hip" });
   const hipValue = useWatch({ control, name: "hip" });
   const selectedShape = useWatch({ control, name: "body_shape" }) ?? "";
+  const selectedFit = useWatch({ control, name: "fit_preference" }) ?? "regular";
+  const selectedSkirtLength = useWatch({ control, name: "skirt_length" }) ?? "midi";
   const computedShape = mode === "exact" && gender === "women"
     ? calculateBodyShape({
         bust: Number(bustValue),
@@ -141,6 +143,30 @@ export function MeasurementForm({
         hip: Number(hipValue),
       })
     : null;
+  const changeUnit = (nextUnit: "metric" | "imperial") => {
+    if (unit === nextUnit) return;
+    const factor = unit === "metric" ? 1 / 2.54 : 2.54;
+    const weightFactor = unit === "metric" ? 1 / 0.453592 : 0.453592;
+    const numericFields = [
+      "height", "bust", "underbust", "waist", "high_hip", "hip", "shoulder",
+      "back_length", "arm_length", "upper_arm", "chest", "neck",
+      "sleeve_length", "inseam", "outseam", "thigh", "rise",
+    ] as const;
+    for (const field of numericFields) {
+      const value = getValues(field);
+      if (typeof value === "number" && Number.isFinite(value)) {
+        setValue(field, value * factor, { shouldDirty: true, shouldValidate: true });
+      }
+    }
+    const weight = getValues("weight");
+    if (typeof weight === "number" && Number.isFinite(weight)) {
+      setValue("weight", weight * weightFactor, { shouldDirty: true, shouldValidate: true });
+    }
+    setUnit(nextUnit);
+  };
+  const setNumericRegister = (name: typeof womenFields[number][0] | typeof menFields[number][0]) =>
+    register(name, { valueAsNumber: true });
+
   const submit = (values: FormValues) => {
     const measurements: Record<string, number> = {};
     for (const [key, value] of Object.entries(values)) {
@@ -167,20 +193,21 @@ export function MeasurementForm({
 
   return (
     <form className="size-advisor-form" onSubmit={handleSubmit(submit)}>
-      <div className="size-unit-toggle" role="group" aria-label="Measurement units">
-        <button type="button" className={unit === "metric" ? "is-active" : ""} onClick={() => setUnit("metric")}>cm / kg</button>
-        <button type="button" className={unit === "imperial" ? "is-active" : ""} onClick={() => setUnit("imperial")}>in / lb</button>
-      </div>
+      <fieldset className="size-unit-toggle" aria-label="Measurement units">
+        <legend>UNITS</legend>
+        <button type="button" className={unit === "metric" ? "is-active" : ""} aria-pressed={unit === "metric"} onClick={() => changeUnit("metric")}>cm <span>/</span> kg</button>
+        <button type="button" className={unit === "imperial" ? "is-active" : ""} aria-pressed={unit === "imperial"} onClick={() => changeUnit("imperial")}>in <span>/</span> lb</button>
+      </fieldset>
       <div className="advisor-field">
         <label htmlFor={`${mode}-height`}>Height ({unit === "metric" ? "cm" : "in"})</label>
-        <input id={`${mode}-height`} type="number" step="any" {...register("height")} required />
+        <input id={`${mode}-height`} type="number" step="any" {...register("height", { valueAsNumber: true })} required />
         {errors.height && <span className="advisor-error">Enter a height between 120 and 220 cm.</span>}
       </div>
       {mode === "quick" ? (
         <>
           <div className="advisor-field">
             <label htmlFor="quick-weight">Weight ({unit === "metric" ? "kg" : "lb"})</label>
-            <input id="quick-weight" type="number" step="any" {...register("weight")} required />
+            <input id="quick-weight" type="number" step="any" {...register("weight", { valueAsNumber: true })} required />
             {errors.weight && <span className="advisor-error">Enter a realistic weight in the selected unit.</span>}
           </div>
           <div className="advisor-field">
@@ -190,7 +217,7 @@ export function MeasurementForm({
               <option>18–29</option><option>30–44</option><option>45–59</option><option>60+</option>
             </select>
           </div>
-          <label className="advisor-label">Body shape</label>
+          <label className="advisor-label">Body shape <span>Choose what feels closest</span></label>
           <BodyShapePicker gender={gender} value={selectedShape} onChange={(value) => setValue("body_shape", value)} />
         </>
       ) : (
@@ -222,7 +249,7 @@ export function MeasurementForm({
                     <MeasurementGuide measurement={name} gender={gender} />
                     <div>
                       <label htmlFor={`exact-${name}`}>{label} ({unit === "metric" ? "cm" : "in"})</label>
-                      <input id={`exact-${name}`} type="number" step="any" {...register(name, { required: !optional })} required={!optional} />
+                      <input id={`exact-${name}`} type="number" step="any" {...setNumericRegister(name)} required={!optional} />
                       <small>{hint}</small>
                       {errors[name] && <span className="advisor-error">Check this measurement and re-measure.</span>}
                     </div>
@@ -241,20 +268,44 @@ export function MeasurementForm({
               <div className="advisor-field">
                 <label htmlFor="bra-size">Bra size (optional)</label>
                 <input id="bra-size" placeholder="e.g. 75C" {...register("bra_size")} />
-                <label htmlFor="skirt-length">Skirt length preference</label>
-                <select id="skirt-length" {...register("skirt_length")} defaultValue="midi">
-                  <option value="knee">Knee</option><option value="midi">Midi</option><option value="long">Long</option>
-                </select>
+                <span className="advisor-label">Preferred skirt length</span>
+                <div className="advisor-choice-row" role="group" aria-label="Preferred skirt length">
+                {(["knee", "midi", "long"] as const).map((length) => (
+                  <button
+                    type="button"
+                    aria-pressed={selectedSkirtLength === length}
+                    className={selectedSkirtLength === length ? "is-selected" : ""}
+                    key={length}
+                    onClick={() => setValue("skirt_length", length, { shouldDirty: true })}
+                  >{length}</button>
+                ))}
+                </div>
               </div>
             </>
           )}
         </>
       )}
       <div className="advisor-field">
-        <label htmlFor={`${mode}-fit`}>Fit preference</label>
-        <select id={`${mode}-fit`} {...register("fit_preference")}>
-          <option value="fitted">Fitted</option><option value="regular">Regular</option><option value="relaxed">Relaxed</option>
-        </select>
+        <span className="advisor-label">How do you like it to fit?</span>
+        <div className="advisor-fit-options" role="group" aria-label="Fit preference">
+          {([
+            ["fitted", "Close", "A defined silhouette"],
+            ["regular", "Classic", "Easy, balanced comfort"],
+            ["relaxed", "Relaxed", "A little extra room"],
+          ] as const).map(([value, title, description]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={selectedFit === value}
+              className={selectedFit === value ? "is-selected" : ""}
+              onClick={() => setValue("fit_preference", value, { shouldDirty: true })}
+            >
+              <span className="advisor-fit-mark" />
+              <strong>{title}</strong>
+              <small>{description}</small>
+            </button>
+          ))}
+        </div>
       </div>
       <label className="advisor-consent">
         <input type="checkbox" {...register("consent")} />
